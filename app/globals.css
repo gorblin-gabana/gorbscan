@@ -1,0 +1,168 @@
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Gorb Theme Colors - Neon Green Focus */
+  --gorb-green: #24D973;
+  --gorb-green-bright: #2EFF7A;
+  --gorb-purple: #1A1A2E;
+  --dark-charcoal: #000000;
+  --soft-slate: #0A0A0A;
+  --glow-cyan: #1CF1DD;
+  --light-gray: #F0F0F0;
+  --dim-gray: #888888;
+  --danger-red: #FF4C4C;
+  
+  /* CSS Variables for Tailwind */
+  --background: 0 0 0;
+  --foreground: 240 240 240;
+  --card: 10 10 10;
+  --card-foreground: 240 240 240;
+  --popover: 10 10 10;
+  --popover-foreground: 240 240 240;
+  --primary: 36 217 115;
+  --primary-foreground: 0 0 0;
+  --secondary: 28 241 221;
+  --secondary-foreground: 0 0 0;
+  --muted: 26 26 46;
+  --muted-foreground: 136 136 136;
+  --accent: 46 255 122;
+  --accent-foreground: 0 0 0;
+  --destructive: 255 76 76;
+  --destructive-foreground: 240 240 240;
+  --border: 34 40 49;
+  --input: 34 40 49;
+  --ring: 36 217 115;
+  --radius: 0.75rem;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  
+  html, body {
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+    box-sizing: border-box;
+  }
+  
+  body {
+    @apply text-foreground font-inter;
+    min-height: 100vh;
+    background: linear-gradient(180deg, #0B0F15 0%, #131A25 45%, #1D2B3B 100%);
+    background-attachment: fixed;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-orbitron;
+  }
+}
+
+@keyframes gradient-move {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@layer components {
+  .gorb-glow {
+    box-shadow: 0 0 20px rgba(36, 217, 115, 0.4);
+  }
+  
+  .gorb-glow-cyan {
+    box-shadow: 0 0 20px rgba(28, 241, 221, 0.4);
+  }
+  
+  .gorb-gradient {
+    background: linear-gradient(135deg, #24D973 0%, #1CF1DD 100%);
+  }
+  
+  .gorb-card {
+    @apply bg-card border border-border rounded-xl backdrop-blur-sm;
+    background: rgba(10, 10, 10, 0.9);
+    border: 1px solid rgba(36, 217, 115, 0.2);
+  }
+  
+  .gorb-button-primary {
+    @apply bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-200;
+    box-shadow: 0 4px 14px 0 rgba(36, 217, 115, 0.5);
+  }
+  
+  .gorb-button-secondary {
+    @apply bg-secondary text-secondary-foreground hover:bg-secondary/90 transition-all duration-200;
+    box-shadow: 0 4px 14px 0 rgba(28, 241, 221, 0.5);
+  }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(36, 217, 115, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(36, 217, 115, 0.8);
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-out forwards;
+}
+@keyframes fadeIn {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+@keyframes fade-in-up {
+  0% {
+    opacity: 0;
+    transform: translateY(32px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fade-in-up 0.8s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.hero-subtext {
+  line-height: 1.6;
+  font-size: 1rem;
+  color: #94A3B8;
+}
+
+.section-metrics {
+  max-width: 640px;
+  margin-inline: auto;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.5rem;
+}
+
+@media (min-width: 1024px) {
+  .section-metrics {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+.btn-cta {
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  margin-top: 1.5rem;
+  border-radius: 9999px;
+}
