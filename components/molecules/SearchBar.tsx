@@ -16,20 +16,20 @@ export const SearchBar: React.FC = () => {
   return (
     <form onSubmit={handleSearch} className="w-full">
       <div className="relative flex items-center">
-        <div className="absolute left-6 z-10">
-          <SearchGorbIcon className="w-7 h-7 text-cyan-400" />
+        <div className="absolute left-4 z-10">
+          <SearchGorbIcon className="w-6 h-6 text-cyan-400" />
         </div>
         <input
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search by Address, Transaction, Block, or Token..."
-          className="w-full pl-16 pr-36 py-3 text-lg bg-white/20 backdrop-blur-md border border-white/30 rounded-full shadow-lg focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent transition-all duration-200 placeholder-gray-300 text-white"
+          className="w-full pl-12 pr-32 py-2 text-base bg-white/10 backdrop-blur border border-white/20 rounded-lg shadow focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent transition-all duration-200 placeholder-gray-400 text-white"
         />
         <Button
           type="submit"
           variant="primary"
-          className="absolute right-3 px-6 py-2 text-base rounded-full shadow bg-gradient-to-r from-cyan-400 to-green-400 hover:from-green-400 hover:to-cyan-400 text-white font-bold border-none"
+          className="absolute right-2 px-5 py-2 text-base rounded-md shadow bg-gradient-to-r from-cyan-400 to-green-400 hover:from-green-400 hover:to-cyan-400 text-white font-bold border-none"
         >
           Search
         </Button>

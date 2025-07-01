@@ -42,9 +42,9 @@ const mockBlocks = [
 
 export const LatestBlocks: React.FC = () => {
 	return (
-		<section className="w-full py-14 bg-transparent border-t border-white/10">
+		<section className="w-full py-10 bg-transparent border-t border-white/10">
 			<div className="container mx-auto px-4 max-w-2xl">
-				<div className="flex flex-col md:flex-row md:items-center md:justify-between mb-8 gap-4">
+				<div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6 gap-4">
 					<div>
 						<h2 className="text-2xl md:text-3xl font-bold font-orbitron text-white mb-1 flex items-center gap-2 drop-shadow">
 							<span>Latest Blocks</span>
@@ -55,12 +55,12 @@ export const LatestBlocks: React.FC = () => {
 					</div>
 					<Button
 						variant="primary"
-						className="px-6 py-3 text-base rounded-full bg-gradient-to-r from-cyan-400 to-green-400 hover:from-green-400 hover:to-cyan-400 text-white font-bold shadow-lg border-none"
+						className="px-5 py-2 text-base rounded-md bg-gradient-to-r from-cyan-400 to-green-400 hover:from-green-400 hover:to-cyan-400 text-white font-bold shadow-lg border-none"
 					>
 						View All Blocks
 					</Button>
 				</div>
-				<div className="space-y-6">
+				<div className="space-y-4">
 					{mockBlocks.map((block) => (
 						<BlockRow key={block.blockNumber} {...block} />
 					))}

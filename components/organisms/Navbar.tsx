@@ -16,10 +16,10 @@ export const Navbar: React.FC = () => {
           <Link href="/" className="flex items-center gap-3 hover:opacity-90 transition">
             <img src="/assets/logo.png" alt="GorbScan Logo" className="w-10 h-10" />
             <div>
-              <h1 className="text-xl font-bold font-orbitron text-foreground">
+              <h1 className="text-xl font-bold font-orbitron text-white">
                 GorbScan
               </h1>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-cyan-200">
                 Gorbchain Explorer
               </p>
             </div>

@@ -6,8 +6,8 @@ import { Activity, Zap, Users, TrendingUp } from 'lucide-react';
 
 export const HeroSection: React.FC = () => {
   return (
-    <section className="w-full py-20 md:py-28 bg-gradient-to-b from-[#0B0F15] to-[#121C27] border-b border-white/10">
-      <div className="container mx-auto px-4 flex flex-col items-center justify-center max-w-2xl animate-fade-in-up">
+    <section className="w-full py-12 md:py-20 bg-gradient-to-b from-[#0B0F15] to-[#121C27] border-b border-white/10">
+      <div className="container mx-auto px-4 flex flex-col items-center justify-center max-w-2xl">
         <div className="flex flex-col items-center justify-center w-full">
           <span className="relative flex items-center justify-center mb-4">
             <span className="absolute w-36 h-36 md:w-40 md:h-40 rounded-full z-0" style={{background: 'radial-gradient(circle at center, #24D97310 0%, #0B0F15 60%)', boxShadow: '0 0 40px 10px #24D97333'}}></span>
