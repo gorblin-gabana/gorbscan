@@ -32,9 +32,7 @@ export default function RootLayout({
         {/* Main Navbar */}
         {/* The Navbar component should be rendered here if not already */}
         <SearchHeader />
-        <div className="pt-28">{/* Add padding to offset fixed navbar + search header */}
-          {children}
-        </div>
+        <div>{children}</div>
       </body>
     </html>
   );

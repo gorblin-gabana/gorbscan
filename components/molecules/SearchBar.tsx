@@ -23,7 +23,7 @@ export const SearchBar: React.FC = () => {
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search by Address, Transaction, Block, or Token..."
+          placeholder="Search address or transaction..."
           className="w-full pl-12 pr-32 py-2 text-base bg-white/10 backdrop-blur border border-white/20 rounded-lg shadow focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-transparent transition-all duration-200 placeholder-gray-400 text-white"
         />
         <Button

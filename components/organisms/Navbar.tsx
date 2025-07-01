@@ -20,19 +20,14 @@ export const Navbar: React.FC = () => {
                 GorbScan
               </h1>
               <p className="text-xs text-cyan-200">
-                Gorbchain Explorer
+                Blockchain Explorer
               </p>
             </div>
+            <span className="ml-4 px-3 py-1 rounded-full bg-green-600 text-white text-xs font-semibold shadow border border-green-400">Mainnet</span>
           </Link>
 
           {/* Right Section */}
           <div className="flex items-center gap-4">
-            {/* Network Selector */}
-            <Button variant="outline" size="sm" className="hidden sm:flex items-center gap-2 px-4 py-1 rounded-full border border-gray-600 bg-black/40 text-white font-semibold shadow-md mr-2">
-              <Globe className="w-4 h-4" />
-              <span>Mainnet</span>
-            </Button>
-
             {/* Navigation Links */}
             <div className="hidden lg:flex items-center gap-4">
               <Link href="/blocks" className={`text-sm px-3 py-1 rounded transition-colors duration-150 ${pathname === '/blocks' ? 'bg-blue-600 text-white font-bold shadow' : 'text-muted-foreground hover:text-foreground hover:bg-white/10'}`}>
