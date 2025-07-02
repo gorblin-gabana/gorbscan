@@ -4,7 +4,7 @@ import { Github, Twitter, MessageCircle } from 'lucide-react';
 export const Footer: React.FC = () => {
   return (
     <footer className="border-t border-border bg-card/50 backdrop-blur-sm">
-      <div className="container mx-auto px-4 py-12">
+      <div className="w-full px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* Brand Section */}
           <div className="col-span-1 md:col-span-2">
@@ -42,7 +42,7 @@ export const Footer: React.FC = () => {
             <ul className="space-y-2">
               <li><a href="/blocks" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Blocks</a></li>
               <li><a href="/transactions" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Transactions</a></li>
-              <li><a href="/validators" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Validators</a></li>
+              <li><a href="/l2-chains" className="text-sm text-muted-foreground hover:text-foreground transition-colors">L2 Chains</a></li>
               <li><a href="/charts" className="text-sm text-muted-foreground hover:text-foreground transition-colors">Charts</a></li>
             </ul>
           </div>

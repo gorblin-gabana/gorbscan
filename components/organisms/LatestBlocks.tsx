@@ -2,68 +2,95 @@
 
 import React from 'react';
 import { BlockRow } from '@/components/molecules/BlockRow';
-import { Button } from '@/components/atoms/Button';
-import { ArrowRight } from 'lucide-react';
-
-const mockBlocks = [
-	{
-		blockNumber: 8429847,
-		timestamp: '12 secs ago',
-		transactionCount: 247,
-		validator: '0x742d35Cc6634C0532925a3b8D4C0532925a3b8D4',
-		reward: '2.5',
-		gasUsed: '29,847,392',
-	},
-	{
-		blockNumber: 8429846,
-		timestamp: '24 secs ago',
-		transactionCount: 189,
-		validator: '0x8D4C0532925a3b8D4742d35Cc6634C0532925a3b',
-		reward: '2.5',
-		gasUsed: '28,392,847',
-	},
-	{
-		blockNumber: 8429845,
-		timestamp: '36 secs ago',
-		transactionCount: 312,
-		validator: '0x925a3b8D4742d35Cc6634C0532925a3b8D4C0532',
-		reward: '2.5',
-		gasUsed: '30,192,485',
-	},
-	{
-		blockNumber: 8429844,
-		timestamp: '48 secs ago',
-		transactionCount: 156,
-		validator: '0xC6634C0532925a3b8D4742d35Cc6634C0532925a',
-		reward: '2.5',
-		gasUsed: '27,583,291',
-	},
-];
+import { useGorbchainData } from '@/contexts/GorbchainDataContext';
+import { ArrowRight, Box } from 'lucide-react';
 
 export const LatestBlocks: React.FC = () => {
-	return (
-		<section className="w-full py-10 bg-transparent border-t border-white/10">
-			<div className="container mx-auto px-4 max-w-2xl">
-				<div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6 gap-4">
-					<div>
-						<h2 className="text-2xl md:text-3xl font-bold font-orbitron text-white mb-1 flex items-center gap-2 drop-shadow">
-							<span>Latest Blocks</span>
-						</h2>
-						<p className="text-cyan-200 text-base">
-							Real-time block production on Gorbchain
-						</p>
+	const { blocks, loading } = useGorbchainData();
+
+	// Get the latest 4 blocks from the context
+	const latestBlocks = blocks.slice(0, 4);
+
+	if (loading) {
+		return (
+			<section className="w-full section-spacing-sm bg-gradient-to-b from-card/20 to-background border-t border-border">
+				<div className="container-page">
+					<div className="section-header">
+						<div className="section-title">
+							<div className="section-icon bg-primary/20 shadow-glow">
+								<Box className="icon-xl text-primary" />
+							</div>
+							<div>
+								<h2 className="heading-lg mb-2">
+									Latest Blocks
+								</h2>
+								<p className="body-lg">
+									Real-time block production on Gorbchain
+								</p>
+							</div>
+						</div>
+						
+						<a
+							href="/blocks"
+							className="btn-outline btn-md group"
+							aria-label="View all blocks"
+						>
+							View All Blocks
+							<ArrowRight className="icon-md group-hover:translate-x-1 transition-transform duration-200" />
+						</a>
 					</div>
-					<Button
-						variant="primary"
-						className="px-5 py-2 text-base rounded-md bg-gradient-to-r from-cyan-400 to-green-400 hover:from-green-400 hover:to-cyan-400 text-white font-bold shadow-lg border-none"
+					
+					<div className="grid gap-4">
+						{Array.from({ length: 4 }).map((_, i) => (
+							<div key={i} className="gorb-card p-6 animate-pulse">
+								<div className="h-4 bg-muted rounded w-3/4 mb-2"></div>
+								<div className="h-4 bg-muted rounded w-1/2"></div>
+							</div>
+						))}
+					</div>
+				</div>
+			</section>
+		);
+	}
+
+	return (
+		<section className="w-full section-spacing-sm bg-gradient-to-b from-card/20 to-background border-t border-border">
+			<div className="container-page">
+				<div className="section-header">
+					<div className="section-title">
+						<div className="section-icon bg-primary/20 shadow-glow">
+							<Box className="icon-xl text-primary" />
+						</div>
+						<div>
+							<h2 className="heading-lg mb-2">
+								Latest Blocks
+							</h2>
+							<p className="body-lg">
+								Real-time block production on Gorbchain
+							</p>
+						</div>
+					</div>
+					
+					<a
+						href="/blocks"
+						className="btn-outline btn-md group"
+						aria-label="View all blocks"
 					>
 						View All Blocks
-					</Button>
+						<ArrowRight className="icon-md group-hover:translate-x-1 transition-transform duration-200" />
+					</a>
 				</div>
-				<div className="space-y-4">
-					{mockBlocks.map((block) => (
+				
+				<div className="grid gap-4">
+					{latestBlocks.map((block) => (
 						<BlockRow key={block.blockNumber} {...block} />
 					))}
+					
+					{latestBlocks.length === 0 && (
+						<div className="text-center py-12">
+							<p className="text-muted-foreground">No recent blocks available</p>
+						</div>
+					)}
 				</div>
 			</div>
 		</section>

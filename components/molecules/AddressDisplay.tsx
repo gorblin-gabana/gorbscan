@@ -20,24 +20,27 @@ export const AddressDisplay: React.FC<AddressDisplayProps> = ({
     ? address 
     : `${address.slice(0, 6)}...${address.slice(-4)}`;
   
-  const handleCopy = async () => {
+  const handleCopy = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
     await navigator.clipboard.writeText(address);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
   
   return (
-    <div className={`inline-flex items-center gap-2 ${className}`}>
-      <span className="font-mono text-sm">{displayAddress}</span>
+    <div className={`address-display inline-flex items-center gap-2 ${className}`}>
+      <span className="font-mono text-sm text-foreground">{displayAddress}</span>
       <button
         onClick={handleCopy}
-        className="p-1 rounded hover:bg-muted transition-colors duration-200"
+        className="p-1 rounded hover:bg-muted transition-colors duration-200 focus-visible"
         title="Copy address"
+        aria-label={`Copy address ${displayAddress}`}
       >
         {copied ? (
-          <Check className="w-4 h-4 text-gorb-green" />
+          <Check className="icon-sm text-success" />
         ) : (
-          <Copy className="w-4 h-4 text-muted-foreground hover:text-foreground" />
+          <Copy className="icon-sm text-muted-foreground hover:text-foreground" />
         )}
       </button>
     </div>

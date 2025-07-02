@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Clock, Zap } from 'lucide-react';
+import { Box, Clock, Zap, User } from 'lucide-react';
 
 interface BlockRowProps {
   blockNumber: number;
@@ -21,36 +21,56 @@ export const BlockRow: React.FC<BlockRowProps> = ({
   return (
     <a
       href={`/block/${blockNumber}`}
-      className="block bg-gradient-to-br from-blue-900/60 to-blue-700/40 rounded-2xl p-6 shadow-xl flex flex-col md:flex-row md:items-center md:justify-between mb-2 hover:scale-[1.02] hover:shadow-2xl transition-transform duration-200 border border-white/10"
+      className="data-row group focus-visible"
+      aria-label={`View details for block ${blockNumber}`}
     >
-      <div className="flex items-center gap-4 mb-4 md:mb-0">
-        <div className="p-3 rounded-full bg-cyan-900/40">
-          <Box className="w-7 h-7 text-cyan-300" />
-        </div>
-        <div>
-          <h3 className="text-xl font-bold text-white font-orbitron mb-1">
-            Block #{blockNumber.toLocaleString()}
-          </h3>
-          <div className="flex items-center gap-4 text-sm text-cyan-200">
-            <div className="flex items-center gap-1">
-              <Clock className="w-4 h-4" />
-              <span>{timestamp}</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <Zap className="w-4 h-4" />
-              <span>{transactionCount} txns</span>
+      <div className="data-row-content">
+        {/* Left Section - Block Info */}
+        <div className="data-row-header">
+          <div className="section-icon bg-primary/10 group-hover:bg-primary/20">
+            <Box className="icon-lg text-primary" />
+          </div>
+          <div>
+            <h3 className="heading-sm text-foreground mb-2">
+              Block #{blockNumber.toLocaleString()}
+            </h3>
+            <div className="flex items-center gap-6 body-sm">
+              <div className="flex items-center gap-2">
+                <Clock className="icon-sm text-primary" />
+                <span>{timestamp}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Zap className="icon-sm text-secondary" />
+                <span>{transactionCount} txns</span>
+              </div>
             </div>
           </div>
         </div>
-      </div>
-      <div className="text-left md:text-right">
-        <p className="text-base font-semibold text-cyan-100 mb-1">
-          Reward: <span className="text-white">{reward} GORB</span>
-        </p>
-        <p className="text-xs text-cyan-200">Gas Used: {gasUsed}</p>
-        <p className="text-xs text-cyan-400 mt-1">
-          Validator: {validator.slice(0, 8)}...
-        </p>
+
+        {/* Right Section - Block Details */}
+        <div className="data-row-meta lg:col-span-2">
+          <div className="space-y-1">
+            <p className="caption">Reward</p>
+            <p className="text-base font-semibold text-primary">
+              {reward} GORB
+            </p>
+          </div>
+          <div className="space-y-1">
+            <p className="caption">Gas Used</p>
+            <p className="text-base font-semibold text-foreground">
+              {gasUsed}
+            </p>
+          </div>
+          <div className="space-y-1">
+            <p className="caption">Validator</p>
+            <div className="flex items-center gap-2">
+              <User className="icon-sm text-secondary" />
+              <span className="text-base font-mono text-secondary">
+                {validator.slice(0, 8)}...
+              </span>
+            </div>
+          </div>
+        </div>
       </div>
     </a>
   );

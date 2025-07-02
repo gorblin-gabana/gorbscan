@@ -4,18 +4,18 @@ import { Footer } from '@/components/organisms/Footer';
 import { TransactionDetails } from '@/components/organisms/TransactionDetails';
 
 interface TransactionPageProps {
-  params: {
+  params: Promise<{
     hash: string;
-  };
+  }>;
 }
 
-export default function TransactionPage({ params }: TransactionPageProps) {
+export default async function TransactionPage({ params }: TransactionPageProps) {
+  const { hash } = await params;
+  
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <main className="container mx-auto px-4 py-8">
-        <TransactionDetails hash={params.hash} />
-      </main>
+      <TransactionDetails hash={hash} />
       <Footer />
     </div>
   );

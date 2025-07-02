@@ -1,54 +1,31 @@
 "use client";
 
-import React, { useState } from 'react';
-import { Copy, Check, ExternalLink, Wallet, TrendingUp, Activity, Coins } from 'lucide-react';
-import { Button } from '@/components/atoms/Button';
-import { Tag } from '@/components/atoms/Tag';
+import React, { useState, useEffect } from 'react';
 import { StatBox } from '@/components/atoms/StatBox';
+import { Tag } from '@/components/atoms/Tag';
+import { Button } from '@/components/ui/button';
 import { TransactionRow } from '@/components/molecules/TransactionRow';
+import { useGorbchainData } from '@/hooks/useGorbchainData';
+import { Copy, Check, ExternalLink, Wallet, Activity, TrendingUp, Coins } from 'lucide-react';
 
 interface AddressDetailsProps {
   address: string;
 }
 
 export const AddressDetails: React.FC<AddressDetailsProps> = ({ address }) => {
+  const { getAddress, loading } = useGorbchainData();
   const [activeTab, setActiveTab] = useState('transactions');
   const [copied, setCopied] = useState(false);
+  const [addressData, setAddressData] = useState<any>(null);
 
-  // Mock address data
-  const addressData = {
-    balance: '1,247.85 GORB',
-    balanceUSD: '$2,847.92',
-    totalTransactions: 1,247,
-    firstSeen: 'Block #8,429,234',
-    lastActivity: '2 hours ago',
-    tokens: [
-      { symbol: 'GORB', balance: '1,247.85', value: '$2,847.92' },
-      { symbol: 'USDC', balance: '500.00', value: '$500.00' },
-      { symbol: 'WETH', balance: '0.25', value: '$847.50' }
-    ]
-  };
-
-  const mockTransactions = [
-    {
-      hash: '0x8f4e2a1b9c3d5e7f8a2b4c6d8e0f1a3b5c7d9e1f3a5b7c9d1e3f5a7b9c1d3e5f',
-      from: '0x742d35Cc6634C0532925a3b8D4C0532925a3b8D4',
-      to: address,
-      value: '125.75',
-      status: 'success' as const,
-      timestamp: '2 hours ago',
-      gasUsed: '21,000',
-    },
-    {
-      hash: '0x1a3b5c7d9e1f3a5b7c9d1e3f5a7b9c1d3e5f7a9b1c3d5e7f9a1b3c5d7e9f1a3b',
-      from: address,
-      to: '0xC6634C0532925a3b8D4742d35Cc6634C0532925a',
-      value: '50.00',
-      status: 'success' as const,
-      timestamp: '5 hours ago',
-      gasUsed: '65,432',
-    }
-  ];
+  useEffect(() => {
+    const loadAddressData = async () => {
+      const data = await getAddress(address);
+      setAddressData(data);
+    };
+    
+    loadAddressData();
+  }, [address, getAddress]);
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(address);
@@ -56,9 +33,37 @@ export const AddressDetails: React.FC<AddressDetailsProps> = ({ address }) => {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  if (loading || !addressData) {
+    return (
+      <div className="space-y-6">
+        <div className="animate-pulse">
+          <div className="h-8 bg-muted rounded w-1/3 mb-4"></div>
+          <div className="h-4 bg-muted rounded w-1/2 mb-8"></div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="gorb-card p-6">
+                <div className="h-4 bg-muted rounded w-3/4 mb-2"></div>
+                <div className="h-6 bg-muted rounded w-1/2"></div>
+              </div>
+            ))}
+          </div>
+          
+          <div className="gorb-card p-6">
+            <div className="h-4 bg-muted rounded w-1/4 mb-4"></div>
+            <div className="space-y-2">
+              <div className="h-3 bg-muted rounded"></div>
+              <div className="h-3 bg-muted rounded w-5/6"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const tabs = [
-    { id: 'transactions', label: 'Transactions', count: addressData.totalTransactions },
-    { id: 'tokens', label: 'Token Holdings', count: addressData.tokens.length },
+    { id: 'transactions', label: 'Transactions', count: addressData.transactions.length },
+    { id: 'tokens', label: 'Token Holdings', count: addressData.tokenHoldings.length },
     { id: 'nfts', label: 'NFTs', count: 0 },
     { id: 'defi', label: 'DeFi Positions', count: 0 }
   ];
@@ -109,12 +114,12 @@ export const AddressDetails: React.FC<AddressDetailsProps> = ({ address }) => {
         />
         <StatBox
           label="Total Transactions"
-          value={addressData.totalTransactions.toLocaleString()}
+          value={addressData.transactions.length.toLocaleString()}
           icon={Activity}
         />
         <StatBox
           label="Token Holdings"
-          value={addressData.tokens.length}
+          value={addressData.tokenHoldings.length}
           icon={Coins}
         />
       </div>
@@ -138,17 +143,17 @@ export const AddressDetails: React.FC<AddressDetailsProps> = ({ address }) => {
             </div>
             <div className="flex justify-between">
               <span className="text-sm text-muted-foreground">First Seen:</span>
-              <span className="text-sm text-foreground">{addressData.firstSeen}</span>
+              <span className="text-sm text-foreground">Jan 15, 2024</span>
             </div>
           </div>
           <div className="space-y-3">
             <div className="flex justify-between">
               <span className="text-sm text-muted-foreground">Last Activity:</span>
-              <span className="text-sm text-foreground">{addressData.lastActivity}</span>
+              <span className="text-sm text-foreground">{addressData.transactions[0]?.timestamp || 'Never'}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-sm text-muted-foreground">Address Type:</span>
-              <Tag status="info">EOA</Tag>
+              <Tag status="info">{addressData.type?.toUpperCase() || 'WALLET'}</Tag>
             </div>
           </div>
         </div>
@@ -187,9 +192,14 @@ export const AddressDetails: React.FC<AddressDetailsProps> = ({ address }) => {
               </Button>
             </div>
             <div className="space-y-4">
-              {mockTransactions.map((tx) => (
-                <TransactionRow key={tx.hash} {...tx} />
+              {addressData.transactions.slice(0, 5).map((tx: any) => (
+                <TransactionRow key={tx.signature} {...tx} />
               ))}
+              {addressData.transactions.length === 0 && (
+                <div className="text-center py-8">
+                  <p className="text-muted-foreground">No transactions found for this address</p>
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -199,7 +209,7 @@ export const AddressDetails: React.FC<AddressDetailsProps> = ({ address }) => {
           <div className="space-y-4">
             <h3 className="text-lg font-semibold text-foreground">Token Holdings</h3>
             <div className="space-y-3">
-              {addressData.tokens.map((token, index) => (
+              {addressData.tokenHoldings.map((token: any, index: number) => (
                 <div key={index} className="flex items-center justify-between p-4 bg-card/50 rounded-lg">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
@@ -207,14 +217,20 @@ export const AddressDetails: React.FC<AddressDetailsProps> = ({ address }) => {
                     </div>
                     <div>
                       <p className="font-medium text-foreground">{token.symbol}</p>
-                      <p className="text-sm text-muted-foreground">{token.balance}</p>
+                      <p className="text-sm text-muted-foreground">{token.amount}</p>
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="font-medium text-foreground">{token.value}</p>
+                    <p className="font-medium text-foreground">{token.amountUSD}</p>
+                    <p className="text-sm text-muted-foreground">{token.price}</p>
                   </div>
                 </div>
               ))}
+              {addressData.tokenHoldings.length === 0 && (
+                <div className="text-center py-8">
+                  <p className="text-muted-foreground">No token holdings found for this address</p>
+                </div>
+              )}
             </div>
           </div>
         )}

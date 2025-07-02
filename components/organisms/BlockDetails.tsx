@@ -1,58 +1,53 @@
 "use client";
 
-import React, { useState } from 'react';
-import { Copy, Check, ExternalLink, Clock, User, Zap, Hash, Box } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Clock, Hash, User, Box, Zap, Copy, Check, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/atoms/Button';
 import { Tag } from '@/components/atoms/Tag';
 import { StatBox } from '@/components/atoms/StatBox';
-import { TransactionRow } from '@/components/molecules/TransactionRow';
 import { DetailRow } from '@/components/molecules/DetailRow';
+import { TransactionRow } from '@/components/molecules/TransactionRow';
+import { useGorbchainData } from '@/contexts/GorbchainDataContext';
+import { Block, Transaction } from '@/contexts/GorbchainDataContext';
 
 interface BlockDetailsProps {
   blockNumber: string;
 }
 
 export const BlockDetails: React.FC<BlockDetailsProps> = ({ blockNumber }) => {
+  const { fetchBlock, fetchTransactions, initialized } = useGorbchainData();
   const [copied, setCopied] = useState(false);
+  const [blockData, setBlockData] = useState<Block | null>(null);
+  const [blockTransactions, setBlockTransactions] = useState<Transaction[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Mock block data
-  const blockData = {
-    number: parseInt(blockNumber),
-    hash: '0x8f4e2a1b9c3d5e7f8a2b4c6d8e0f1a3b5c7d9e1f3a5b7c9d1e3f5a7b9c1d3e5f',
-    parentHash: '0x1a3b5c7d9e1f3a5b7c9d1e3f5a7b9c1d3e5f7a9b1c3d5e7f9a1b3c5d7e9f1a3b',
-    timestamp: '2025-01-01 12:34:56 UTC',
-    timeAgo: '2 minutes ago',
-    validator: '0x742d35Cc6634C0532925a3b8D4C0532925a3b8D4',
-    transactionCount: 247,
-    gasUsed: '29,847,392',
-    gasLimit: '30,000,000',
-    baseFee: '0.000000012 GORB',
-    reward: '2.5 GORB',
-    size: '1,247 bytes',
-    difficulty: '15,847,392,847',
-    totalDifficulty: '58,847,392,847,123'
-  };
-
-  const mockTransactions = [
-    {
-      hash: '0x8f4e2a1b9c3d5e7f8a2b4c6d8e0f1a3b5c7d9e1f3a5b7c9d1e3f5a7b9c1d3e5f',
-      from: '0x742d35Cc6634C0532925a3b8D4C0532925a3b8D4',
-      to: '0x8D4C0532925a3b8D4742d35Cc6634C0532925a3b',
-      value: '125.75',
-      status: 'success' as const,
-      timestamp: '2 mins ago',
-      gasUsed: '21,000',
-    },
-    {
-      hash: '0x1a3b5c7d9e1f3a5b7c9d1e3f5a7b9c1d3e5f7a9b1c3d5e7f9a1b3c5d7e9f1a3b',
-      from: '0x925a3b8D4742d35Cc6634C0532925a3b8D4C0532',
-      to: '0xC6634C0532925a3b8D4742d35Cc6634C0532925a',
-      value: '0.05',
-      status: 'success' as const,
-      timestamp: '2 mins ago',
-      gasUsed: '65,432',
-    }
-  ];
+  useEffect(() => {
+    const loadBlockData = async () => {
+      if (!initialized) return;
+      
+      try {
+        setLoading(true);
+        
+        // Load block data
+        const block = await fetchBlock(parseInt(blockNumber));
+        setBlockData(block);
+        
+        // For now, we'll get recent transactions since we don't have block-specific filtering
+        // In a real implementation, the API would filter by block number
+        const transactionsResponse = await fetchTransactions(1, 10);
+        const blockTxs = transactionsResponse.transactions.filter(
+          (tx: Transaction) => tx.blockNumber === parseInt(blockNumber)
+        );
+        setBlockTransactions(blockTxs);
+      } catch (error) {
+        console.error('Failed to load block data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadBlockData();
+  }, [blockNumber, fetchBlock, fetchTransactions, initialized]);
 
   const handleCopy = async (text: string) => {
     await navigator.clipboard.writeText(text);
@@ -60,17 +55,45 @@ export const BlockDetails: React.FC<BlockDetailsProps> = ({ blockNumber }) => {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  if (!initialized || loading || !blockData) {
+    return (
+      <div className="space-y-6">
+        <div className="animate-pulse">
+          <div className="h-8 bg-muted rounded w-1/3 mb-4"></div>
+          <div className="h-4 bg-muted rounded w-1/2 mb-8"></div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="gorb-card p-6">
+                <div className="h-4 bg-muted rounded w-3/4 mb-2"></div>
+                <div className="h-6 bg-muted rounded w-1/2"></div>
+              </div>
+            ))}
+          </div>
+          
+          <div className="gorb-card p-6">
+            <div className="h-4 bg-muted rounded w-1/4 mb-4"></div>
+            <div className="space-y-2">
+              <div className="h-3 bg-muted rounded"></div>
+              <div className="h-3 bg-muted rounded w-5/6"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold font-orbitron text-foreground mb-2">
-            Block #{blockData.number.toLocaleString()}
+            Block #{blockData.blockNumber.toLocaleString()}
           </h1>
           <div className="flex items-center gap-2">
             <Tag status="success">Finalized</Tag>
-            <span className="text-sm text-muted-foreground">{blockData.timeAgo}</span>
+            <span className="text-sm text-muted-foreground">{blockData.timestamp}</span>
           </div>
         </div>
         <Button variant="primary" className="flex items-center gap-2">
@@ -83,12 +106,12 @@ export const BlockDetails: React.FC<BlockDetailsProps> = ({ blockNumber }) => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatBox
           label="Transactions"
-          value={blockData.transactionCount}
+          value={blockData.transactionCount.toString()}
           icon={Zap}
         />
         <StatBox
           label="Gas Used"
-          value={`${((parseInt(blockData.gasUsed.replace(/,/g, '')) / parseInt(blockData.gasLimit.replace(/,/g, ''))) * 100).toFixed(1)}%`}
+          value={blockData.gasUsed}
           icon={Box}
         />
         <StatBox
@@ -147,7 +170,6 @@ export const BlockDetails: React.FC<BlockDetailsProps> = ({ blockNumber }) => {
               value={
                 <div className="text-right">
                   <div className="text-sm text-foreground">{blockData.timestamp}</div>
-                  <div className="text-xs text-muted-foreground">{blockData.timeAgo}</div>
                 </div>
               }
             />
@@ -157,7 +179,7 @@ export const BlockDetails: React.FC<BlockDetailsProps> = ({ blockNumber }) => {
               label="Validator"
               value={
                 <span className="font-mono text-sm text-foreground">
-                  {blockData.validator.slice(0, 8)}...{blockData.validator.slice(-6)}
+                  {blockData.validator}
                 </span>
               }
             />
@@ -170,57 +192,53 @@ export const BlockDetails: React.FC<BlockDetailsProps> = ({ blockNumber }) => {
               value={
                 <div className="text-right">
                   <div className="text-sm text-foreground">{blockData.gasUsed}</div>
-                  <div className="text-xs text-muted-foreground">
-                    {((parseInt(blockData.gasUsed.replace(/,/g, '')) / parseInt(blockData.gasLimit.replace(/,/g, ''))) * 100).toFixed(2)}% of limit
-                  </div>
                 </div>
               }
             />
             
             <DetailRow
-              label="Gas Limit"
-              value={<span className="text-sm text-foreground">{blockData.gasLimit}</span>}
-            />
-            
-            <DetailRow
-              label="Base Fee"
-              value={<span className="text-sm text-foreground">{blockData.baseFee}</span>}
-            />
-            
-            <DetailRow
               label="Block Reward"
-              value={<span className="text-sm text-foreground">{blockData.reward}</span>}
+              value={<span className="text-sm text-foreground">{blockData.reward} GORB</span>}
             />
             
             <DetailRow
               label="Difficulty"
               value={<span className="text-sm text-foreground">{blockData.difficulty}</span>}
             />
+            
+            <DetailRow
+              label="Block Size"
+              value={<span className="text-sm text-foreground">{blockData.size}</span>}
+            />
           </div>
         </div>
       </div>
 
       {/* Transactions in Block */}
-      <div className="gorb-card p-6">
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="text-lg font-semibold text-foreground">
-            Transactions ({blockData.transactionCount})
-          </h3>
-          <Button variant="outline" size="sm">
-            View All Transactions
-          </Button>
+      <div className="gorb-card">
+        <div className="p-6 border-b border-border">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-semibold text-foreground">
+              Transactions in Block ({blockTransactions.length})
+            </h3>
+            {blockTransactions.length > 5 && (
+              <Button variant="outline" size="sm">
+                View All Transactions
+              </Button>
+            )}
+          </div>
         </div>
         
-        <div className="space-y-4">
-          {mockTransactions.map((tx) => (
-            <TransactionRow key={tx.hash} {...tx} />
+        <div className="divide-y divide-border">
+          {blockTransactions.slice(0, 5).map((transaction) => (
+            <div key={transaction.signature} className="p-6">
+              <TransactionRow {...transaction} />
+            </div>
           ))}
           
-          {blockData.transactionCount > 2 && (
-            <div className="text-center py-4">
-              <Button variant="ghost">
-                Load More Transactions ({blockData.transactionCount - 2} remaining)
-              </Button>
+          {blockTransactions.length === 0 && (
+            <div className="p-6 text-center text-muted-foreground">
+              No transactions found in this block
             </div>
           )}
         </div>

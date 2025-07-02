@@ -1,69 +1,103 @@
 import React from 'react';
-import { ArrowRight, Clock } from 'lucide-react';
+import { ArrowRight, Clock, Zap, ArrowUpRight } from 'lucide-react';
 import { AddressDisplay } from './AddressDisplay';
-import { Tag } from '@/components/atoms/Tag';
 
 interface TransactionRowProps {
-  hash: string;
-  from: string;
-  to: string;
-  value: string;
-  status: 'success' | 'error' | 'pending';
+  signature: string;
+  signer: string;
+  recipient: string;
+  amount: string;
+  status: 'success' | 'failed' | 'pending';
   timestamp: string;
-  gasUsed: string;
+  computeUnits: number;
+  token: string;
 }
 
 export const TransactionRow: React.FC<TransactionRowProps> = ({
-  hash,
-  from,
-  to,
-  value,
+  signature,
+  signer,
+  recipient,
+  amount,
   status,
   timestamp,
-  gasUsed,
+  computeUnits,
+  token,
 }) => {
+  // Add safety checks for undefined values
+  if (!signature || !signer || !recipient) {
+    return null;
+  }
+
+  const getStatusClass = (status: string) => {
+    switch (status) {
+      case 'success':
+        return 'status-success';
+      case 'failed':
+        return 'status-error';
+      case 'pending':
+        return 'status-pending';
+      default:
+        return 'status-info';
+    }
+  };
+
   return (
-    <div className="gorb-card p-4 hover:gorb-glow transition-all duration-300">
-      <div className="flex items-center justify-between">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 rounded-lg bg-primary/10">
-              <ArrowRight className="w-4 h-4 text-primary" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-foreground truncate">
-                Tx: {hash.slice(0, 10)}...{hash.slice(-8)}
-              </p>
-              <div className="flex items-center gap-2 mt-1">
-                <Clock className="w-3 h-3 text-muted-foreground" />
-                <span className="text-xs text-muted-foreground">{timestamp}</span>
+    <a
+      href={`/tx/${signature}`}
+      className="data-row group focus-visible card-cyan-glow"
+      aria-label={`View transaction ${signature.slice(0, 8)}...${signature.slice(-6)}`}
+    >
+      <div className="data-row-content">
+        {/* Left Section - Transaction Info */}
+        <div className="data-row-header">
+          <div className="section-icon bg-secondary/10 group-hover:bg-secondary/20">
+            <ArrowUpRight className="icon-lg text-secondary" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h3 className="text-lg font-bold text-foreground font-mono mb-2 truncate">
+              {signature.slice(0, 12)}...{signature.slice(-10)}
+            </h3>
+            <div className="flex items-center gap-6 body-sm">
+              <div className="flex items-center gap-2">
+                <Clock className="icon-sm text-secondary" />
+                <span>{timestamp || 'Unknown'}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Zap className="icon-sm text-primary" />
+                <span>CU: {computeUnits || 0}</span>
               </div>
             </div>
           </div>
-          
-          <div className="flex items-center gap-4 text-sm">
-            <div className="flex items-center gap-2">
-              <span className="text-muted-foreground">From:</span>
-              <AddressDisplay address={from} />
-            </div>
-            <ArrowRight className="w-3 h-3 text-muted-foreground" />
-            <div className="flex items-center gap-2">
-              <span className="text-muted-foreground">To:</span>
-              <AddressDisplay address={to} />
-            </div>
+        </div>
+
+        {/* Middle Section - Address Flow */}
+        <div className="flex items-center justify-center gap-4">
+          <div className="text-center">
+            <p className="caption mb-2">From</p>
+            <AddressDisplay address={signer} />
+          </div>
+          <ArrowRight className="icon-md text-primary mt-6" />
+          <div className="text-center">
+            <p className="caption mb-2">To</p>
+            <AddressDisplay address={recipient} />
           </div>
         </div>
         
-        <div className="flex flex-col items-end gap-2 ml-4">
-          <Tag status={status}>
+        {/* Right Section - Transaction Details */}
+        <div className="flex flex-col gap-4 lg:items-end">
+          <div className={getStatusClass(status)}>
             {status.charAt(0).toUpperCase() + status.slice(1)}
-          </Tag>
-          <div className="text-right">
-            <p className="text-sm font-medium text-foreground">{value} GORB</p>
-            <p className="text-xs text-muted-foreground">Gas: {gasUsed}</p>
+          </div>
+          <div className="lg:text-right">
+            <p className="text-lg font-bold text-secondary mb-1">
+              {amount || '0'} {token || 'GORB'}
+            </p>
+            <p className="caption">
+              Transaction Value
+            </p>
           </div>
         </div>
       </div>
-    </div>
+    </a>
   );
 };
