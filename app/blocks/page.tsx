@@ -21,7 +21,7 @@ export default function BlocksPage() {
   useEffect(() => {
     const loadBlocks = async () => {
       if (!initialized) return;
-      
+
       try {
         setLoading(true);
         const response = await fetchBlocks(currentPage, itemsPerPage);
@@ -53,7 +53,7 @@ export default function BlocksPage() {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      
+
       <main className="relative w-full px-4 sm:px-6 lg:px-8 py-6">
         {/* Results Summary */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 bg-card/50 rounded-lg border border-border mb-6">
@@ -75,10 +75,10 @@ export default function BlocksPage() {
 
         {/* Blocks List */}
         <div className="space-y-4 mb-8">
-          {blocks.map((block) => (
-            <BlockRow key={block.blockNumber} {...block} />
+          {blocks.map((block: any) => (
+            <BlockRow key={block.blockHeight} {...block} />
           ))}
-          
+
           {blocks.length === 0 && (
             <div className="text-center py-12">
               <p className="text-muted-foreground">No blocks available</p>
@@ -92,7 +92,7 @@ export default function BlocksPage() {
             <p className="body-sm">
               Page {currentPage} of {totalPages}
             </p>
-            
+
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
@@ -102,7 +102,7 @@ export default function BlocksPage() {
                 <ChevronLeft className="icon-sm" />
                 Previous
               </button>
-              
+
               <div className="flex items-center gap-1">
                 {Array.from({ length: Math.min(7, totalPages) }, (_, i) => {
                   let pageNum: number;
@@ -115,26 +115,25 @@ export default function BlocksPage() {
                   } else {
                     pageNum = currentPage - 3 + i;
                   }
-                  
+
                   if (pageNum < 1 || pageNum > totalPages) return null;
-                  
+
                   return (
                     <button
                       key={pageNum}
                       onClick={() => setCurrentPage(pageNum)}
                       disabled={loading}
-                      className={`w-8 h-8 rounded text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-                        currentPage === pageNum
+                      className={`w-8 h-8 rounded text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${currentPage === pageNum
                           ? 'bg-primary text-primary-foreground'
                           : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-                      }`}
+                        }`}
                     >
                       {pageNum}
                     </button>
                   );
                 })}
               </div>
-              
+
               <button
                 onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                 disabled={currentPage === totalPages || loading}

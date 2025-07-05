@@ -11,6 +11,7 @@ export const LatestBlocks: React.FC = () => {
 	// Get the latest 4 blocks from the context
 	const latestBlocks = blocks.slice(0, 4);
 
+
 	if (loading) {
 		return (
 			<section className="w-full section-spacing-sm bg-gradient-to-b from-card/20 to-background border-t border-border">
@@ -29,7 +30,7 @@ export const LatestBlocks: React.FC = () => {
 								</p>
 							</div>
 						</div>
-						
+
 						<a
 							href="/blocks"
 							className="btn-outline btn-md group"
@@ -39,7 +40,7 @@ export const LatestBlocks: React.FC = () => {
 							<ArrowRight className="icon-md group-hover:translate-x-1 transition-transform duration-200" />
 						</a>
 					</div>
-					
+
 					<div className="grid gap-4">
 						{Array.from({ length: 4 }).map((_, i) => (
 							<div key={i} className="gorb-card p-6 animate-pulse">
@@ -70,7 +71,7 @@ export const LatestBlocks: React.FC = () => {
 							</p>
 						</div>
 					</div>
-					
+
 					<a
 						href="/blocks"
 						className="btn-outline btn-md group"
@@ -80,12 +81,12 @@ export const LatestBlocks: React.FC = () => {
 						<ArrowRight className="icon-md group-hover:translate-x-1 transition-transform duration-200" />
 					</a>
 				</div>
-				
+
 				<div className="grid gap-4">
-					{latestBlocks.map((block) => (
-						<BlockRow key={block.blockNumber} {...block} />
+					{latestBlocks.map((block:any) => (
+						<BlockRow key={block.blockHeight} {...block} />
 					))}
-					
+
 					{latestBlocks.length === 0 && (
 						<div className="text-center py-12">
 							<p className="text-muted-foreground">No recent blocks available</p>

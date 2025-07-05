@@ -2,6 +2,8 @@
 
 import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
 
+
+const BASE_URL = process.env.NEXT_PUBLIC_FRONTEND_URL;
 // ===== TYPES =====
 export interface Block {
   blockNumber: number;
@@ -69,15 +71,38 @@ export interface L2Chain {
   logo?: string;
 }
 
+export interface NetworkHealth {
+  tps: number;
+  successRate: number;
+  blockTime: number;
+  epoch: number;
+  epochProgress: number;
+}
+
+export interface Supply {
+  total: number;
+  circulating: number;
+  nonCirculating: number;
+}
+
+export interface Metadata {
+  dataSource: string;
+  estimatedValues: string[];
+  lastUpdated: string; // ISO date string
+  rpcStatus: string;
+}
+
 export interface NetworkStats {
-  networkTPS: string;
-  totalL2Chains: string;
-  totalBlocks: string;
-  marketCap: string;
-  totalValueLocked: string;
-  avgBlockTime: string;
-  networkUptime: string;
-  avgCommission: string;
+  totalTransactions: number;
+  totalWallets: number;
+  totalTokenVolume: string;
+  activeWalletsToday: number;
+  transactionsToday: number;
+  currentSlot: number;
+  tokenCount: number;
+  networkHealth: NetworkHealth;
+  supply: Supply;
+  metadata: Metadata;
 }
 
 export interface Address {
@@ -119,65 +144,84 @@ export interface ChartData {
   };
 }
 
+
+export interface DailyTxCount {
+  date: string;   // e.g., "2025-06-04"
+  count: number;  // number of transactions on that day
+}
+
+export interface TxChartData {
+  chartData: DailyTxCount[];
+  totalTxns: number;
+  startDate: string; // ISO date string
+  endDate: string;   // ISO date string
+}
+
+
 // ===== MOCK DATA =====
-export const MOCK_NETWORK_STATS: NetworkStats = {
-  networkTPS: '2,847',
-  totalL2Chains: '6',
-  totalBlocks: '8,429,847',
-  marketCap: '$2.4B',
-  totalValueLocked: '$7.25B',
-  avgBlockTime: '1.2s',
-  networkUptime: '99.8%',
-  avgCommission: '2.75%'
+// export const MOCK_NETWORK_STATS: NetworkStats = {
+//   networkTPS: '2,847',
+//   totalL2Chains: '6',
+//   totalBlocks: '8,429,847',
+//   marketCap: '$2.4B',
+//   totalValueLocked: '$7.25B',
+//   avgBlockTime: '1.2s',
+//   networkUptime: '99.8%',
+//   avgCommission: '2.75%'
+// };
+
+export const getBlocks = async (count: number, startBlock: number = 8429847) => {
+
+  try {
+    const response = await fetch(`${BASE_URL}/api/block/latest?limit=${count}`);
+    const res = await response.json();
+
+    return res;
+  }
+  catch (err: any) {
+    return [];
+  }
+
+
 };
 
-export const generateMockBlocks = (count: number, startBlock: number = 8429847): Block[] => {
-  return Array.from({ length: count }, (_, i) => ({
-    blockNumber: startBlock - i,
-    timestamp: `${12 + i * 12} secs ago`,
-    transactionCount: Math.floor(Math.random() * 300) + 50,
-    validator: 'Gorbchain Validator',
-    reward: '2.5',
-    gasUsed: `${Math.floor(Math.random() * 10000000) + 20000000}`,
-    hash: `0x${Math.random().toString(16).substr(2, 64)}`,
-    parentHash: `0x${Math.random().toString(16).substr(2, 64)}`,
-    size: `${Math.floor(Math.random() * 50000) + 10000} bytes`,
-    difficulty: `${Math.floor(Math.random() * 1000000) + 5000000}`,
-  }));
-};
-
-export const generateMockTransactions = (count: number): Transaction[] => {
-  const types: Transaction['type'][] = ['transfer', 'swap', 'stake', 'vote', 'contract'];
-  const statuses: Transaction['status'][] = ['success', 'failed', 'pending'];
-  
-  return Array.from({ length: count }, (_, i) => ({
-    signature: `0x${Math.random().toString(16).substr(2, 64)}`,
-    blockNumber: 8429847 - Math.floor(i / 10),
-    timestamp: `${30 + i * 15} secs ago`,
-    blockTime: `Jul ${Math.floor(Math.random() * 30) + 1}, 2025 • ${String(Math.floor(Math.random() * 24)).padStart(2, '0')}:${String(Math.floor(Math.random() * 60)).padStart(2, '0')} UTC`,
-    status: statuses[Math.floor(Math.random() * statuses.length)],
-    signer: `0x${Math.random().toString(16).substr(2, 40)}`,
-    recipient: `0x${Math.random().toString(16).substr(2, 40)}`,
-    amount: (Math.random() * 10).toFixed(6),
-    amountUSD: `$${(Math.random() * 1000).toFixed(2)}`,
-    token: 'GORB',
-    fee: (Math.random() * 0.01).toFixed(6),
-    feeUSD: `$${(Math.random() * 0.1).toFixed(4)}`,
-    computeUnits: Math.floor(Math.random() * 200) + 50,
-    version: 0,
-    recentBlockhash: `0x${Math.random().toString(16).substr(2, 64)}`,
-    type: types[Math.floor(Math.random() * types.length)],
-    instructions: [{
-      programId: '11111111111111111111111111111112',
-      programName: 'System Program',
-      instruction: 'Transfer',
-      data: '0x02000000e803000000000000',
-      accounts: [
-        { pubkey: `0x${Math.random().toString(16).substr(2, 40)}`, isSigner: true, isWritable: true },
-        { pubkey: `0x${Math.random().toString(16).substr(2, 40)}`, isSigner: false, isWritable: true }
-      ]
-    }]
-  }));
+export const getTransactions = async (count: number): Promise<Transaction[]> => {
+  try {
+    const response = await fetch(`https://api.gorbscan.com/api/tx/latest?limit=${count}`);
+    const data = await response.json();
+    // Map API response to Transaction[]
+    return data.map((item: any) => ({
+      signature: item.transaction.signatures[0],
+      blockNumber: item.slot,
+      timestamp: new Date(item.blockTime * 1000).toISOString(),
+      blockTime: item.blockTime.toString(),
+      status: item.meta.status.Err ? 'failed' : 'success',
+      signer: item.transaction.message.accountKeys[0]?.pubkey || '',
+      recipient: item.transaction.message.instructions[0]?.parsed?.info?.destination || '',
+      amount: (item.transaction.message.instructions[0]?.parsed?.info?.lamports / 1e9).toFixed(6),
+      amountUSD: '', // Not available in API
+      token: 'GORB', // Or parse from instruction if available
+      fee: (item.meta.fee / 1e9).toFixed(6),
+      feeUSD: '', // Not available in API
+      computeUnits: item.meta.computeUnitsConsumed || 0,
+      version: item.transaction.version === 'legacy' ? 0 : 1,
+      recentBlockhash: item.transaction.message.recentBlockhash,
+      type: item.transaction.message.instructions[0]?.parsed?.type || 'transfer',
+      instructions: item.transaction.message.instructions.map((ix: any) => ({
+        programId: ix.programId,
+        programName: ix.program,
+        instruction: ix.parsed?.type || '',
+        data: '', // Not available in API
+        accounts: (item.transaction.message.accountKeys || []).map((acc: any) => ({
+          pubkey: acc.pubkey,
+          isSigner: acc.signer,
+          isWritable: acc.writable
+        }))
+      }))
+    }));
+  } catch (err) {
+    return [];
+  }
 };
 
 export const MOCK_L2_CHAINS: L2Chain[] = [
@@ -318,26 +362,29 @@ export const MOCK_L2_CHAINS: L2Chain[] = [
 // ===== DATA STATE =====
 interface DataState {
   // Core data
-  networkStats: NetworkStats;
+  networkStats: NetworkStats | null;
   blocks: Block[];
   transactions: Transaction[];
   l2Chains: L2Chain[];
-  
+
   // Pagination data
   totalBlocks: number;
   totalTransactions: number;
-  
+
   // Loading states
   loading: boolean;
   initialized: boolean;
-  
+
   // Cache for individual items
   blockCache: Map<number, Block>;
   transactionCache: Map<string, Transaction>;
   addressCache: Map<string, Address>;
+
+  // Chart data
+  txChartData: TxChartData | null;
 }
 
-type DataAction = 
+type DataAction =
   | { type: 'SET_LOADING'; payload: boolean }
   | { type: 'SET_INITIALIZED'; payload: boolean }
   | { type: 'SET_NETWORK_STATS'; payload: NetworkStats }
@@ -346,10 +393,11 @@ type DataAction =
   | { type: 'SET_L2_CHAINS'; payload: L2Chain[] }
   | { type: 'CACHE_BLOCK'; payload: { blockNumber: number; block: Block } }
   | { type: 'CACHE_TRANSACTION'; payload: { signature: string; transaction: Transaction } }
-  | { type: 'CACHE_ADDRESS'; payload: { address: string; data: Address } };
+  | { type: 'CACHE_ADDRESS'; payload: { address: string; data: Address } }
+  | { type: 'SET_TX_CHART_DATA'; payload: TxChartData | null };
 
 const initialState: DataState = {
-  networkStats: MOCK_NETWORK_STATS,
+  networkStats: null,
   blocks: [],
   transactions: [],
   l2Chains: [],
@@ -360,6 +408,7 @@ const initialState: DataState = {
   blockCache: new Map(),
   transactionCache: new Map(),
   addressCache: new Map(),
+  txChartData: null,
 };
 
 function dataReducer(state: DataState, action: DataAction): DataState {
@@ -371,16 +420,16 @@ function dataReducer(state: DataState, action: DataAction): DataState {
     case 'SET_NETWORK_STATS':
       return { ...state, networkStats: action.payload };
     case 'SET_BLOCKS':
-      return { 
-        ...state, 
-        blocks: action.payload.blocks, 
-        totalBlocks: action.payload.total 
+      return {
+        ...state,
+        blocks: action.payload.blocks,
+        totalBlocks: action.payload.total
       };
     case 'SET_TRANSACTIONS':
-      return { 
-        ...state, 
-        transactions: action.payload.transactions, 
-        totalTransactions: action.payload.total 
+      return {
+        ...state,
+        transactions: action.payload.transactions,
+        totalTransactions: action.payload.total
       };
     case 'SET_L2_CHAINS':
       return { ...state, l2Chains: action.payload };
@@ -396,6 +445,8 @@ function dataReducer(state: DataState, action: DataAction): DataState {
       const newAddressCache = new Map(state.addressCache);
       newAddressCache.set(action.payload.address, action.payload.data);
       return { ...state, addressCache: newAddressCache };
+    case 'SET_TX_CHART_DATA':
+      return { ...state, txChartData: action.payload };
     default:
       return state;
   }
@@ -411,6 +462,7 @@ interface GorbchainDataContextType extends DataState {
   fetchL2Chains: (filters?: { status?: string }) => Promise<L2Chain[]>;
   fetchAddress: (address: string) => Promise<Address | null>;
   fetchChartData: () => Promise<ChartData>;
+  fetchTxChartData: () => Promise<TxChartData | null>;
   search: (query: string) => Promise<{ blocks: Block[]; transactions: Transaction[]; addresses: string[] }>;
   refreshData: () => Promise<void>;
 }
@@ -433,33 +485,38 @@ export const GorbchainDataProvider: React.FC<GorbchainDataProviderProps> = ({
   useEffect(() => {
     const initializeData = async () => {
       dispatch({ type: 'SET_LOADING', payload: true });
-      
+
       try {
         // Simulate API delay
         await new Promise(resolve => setTimeout(resolve, 500));
-        
+
         if (useMockData) {
           // Load mock data
-          const blocks = generateMockBlocks(200);
-          const transactions = generateMockTransactions(500);
-          
-          dispatch({ type: 'SET_NETWORK_STATS', payload: MOCK_NETWORK_STATS });
+          const blocks = await getBlocks(200);
+
+          const transactions = await getTransactions(300);
+
+          // Fetch network stats from API
+          const statsResponse = await fetch(`${BASE_URL}/api/analytics/overview`);
+          const statsData = await statsResponse.json();
+          dispatch({ type: 'SET_NETWORK_STATS', payload: statsData });
+
           dispatch({ type: 'SET_BLOCKS', payload: { blocks: blocks.slice(0, 10), total: blocks.length } });
           dispatch({ type: 'SET_TRANSACTIONS', payload: { transactions: transactions.slice(0, 10), total: transactions.length } });
           dispatch({ type: 'SET_L2_CHAINS', payload: MOCK_L2_CHAINS });
-          
+
           // Cache all blocks and transactions for quick access
-          blocks.forEach(block => {
+          blocks.forEach((block: any) => {
             dispatch({ type: 'CACHE_BLOCK', payload: { blockNumber: block.blockNumber, block } });
           });
-          transactions.forEach(tx => {
+          transactions.forEach((tx: any) => {
             dispatch({ type: 'CACHE_TRANSACTION', payload: { signature: tx.signature, transaction: tx } });
           });
         } else {
           // TODO: Load from real API
           console.log('Real API integration not implemented yet');
         }
-        
+
         dispatch({ type: 'SET_INITIALIZED', payload: true });
       } catch (error) {
         console.error('Failed to initialize data:', error);
@@ -471,35 +528,34 @@ export const GorbchainDataProvider: React.FC<GorbchainDataProviderProps> = ({
     initializeData();
   }, [useMockData]);
 
+  // Auto-fetch txChartData on mount
+  useEffect(() => {
+    fetchTxChartData();
+  }, []);
+
   // API Methods
   const fetchBlocks = async (page: number = 1, limit: number = 25) => {
-    const startIndex = (page - 1) * limit;
-    const allBlocks = Array.from(state.blockCache.values()).sort((a, b) => b.blockNumber - a.blockNumber);
-    const blocks = allBlocks.slice(startIndex, startIndex + limit);
-    
-    return { blocks, total: allBlocks.length };
+    // Always fetch fresh mock blocks for the requested page
+    const startBlock = 8429847 - ((page - 1) * limit);
+    const blocks = await getBlocks(limit, startBlock);
+    return { blocks, total: 8429847 };
   };
 
   const fetchBlock = async (blockNumber: number) => {
-    // Check cache first
-    if (state.blockCache.has(blockNumber)) {
-      return state.blockCache.get(blockNumber)!;
-    }
-    
-    // Generate if not in cache (for demo purposes)
-    const block = generateMockBlocks(1, blockNumber)[0];
-    dispatch({ type: 'CACHE_BLOCK', payload: { blockNumber, block } });
-    return block;
+    // Always fetch a single mock block for the requested blockNumber
+    const blocks = await getBlock(blockNumber);
+    console.log("block ", blocks)
+    return blocks || null;
   };
 
   const fetchTransactions = async (page: number = 1, limit: number = 25, filters?: { status?: string; search?: string }) => {
     let allTransactions = Array.from(state.transactionCache.values());
-    
+
     // Apply filters
     if (filters?.status && filters.status !== 'all') {
       allTransactions = allTransactions.filter(tx => tx.status === filters.status);
     }
-    
+
     if (filters?.search) {
       const search = filters.search.toLowerCase();
       allTransactions = allTransactions.filter(tx =>
@@ -508,32 +564,44 @@ export const GorbchainDataProvider: React.FC<GorbchainDataProviderProps> = ({
         tx.recipient.toLowerCase().includes(search)
       );
     }
-    
+
     const startIndex = (page - 1) * limit;
     const transactions = allTransactions.slice(startIndex, startIndex + limit);
-    
+
     return { transactions, total: allTransactions.length };
   };
 
-  const fetchTransaction = async (signature: string) => {
-    if (state.transactionCache.has(signature)) {
-      return state.transactionCache.get(signature)!;
+  const getBlock = async (block: any) => {
+    try {
+      const response = await fetch(`${BASE_URL}/api/block/transactions/${block}`)
+
+      const res = await response.json();
+      return res;
     }
-    
-    // Generate if not found (for demo)
-    const transaction = generateMockTransactions(1)[0];
-    transaction.signature = signature;
-    dispatch({ type: 'CACHE_TRANSACTION', payload: { signature, transaction } });
-    return transaction;
+    catch (err: any) {
+      return null;
+    }
+  }
+  const fetchTransaction = async (signature: string) => {
+   try{
+      const response = await fetch(`${BASE_URL}/api/tx/${signature}`);
+
+      const res = await response.json();
+
+      return res;
+   }
+   catch(err:any){
+      return null;
+   }
   };
 
   const fetchL2Chains = async (filters?: { status?: string }) => {
     let chains = [...MOCK_L2_CHAINS];
-    
+
     if (filters?.status && filters.status !== 'all') {
       chains = chains.filter(chain => chain.status === filters.status);
     }
-    
+
     return chains;
   };
 
@@ -541,7 +609,7 @@ export const GorbchainDataProvider: React.FC<GorbchainDataProviderProps> = ({
     if (state.addressCache.has(address)) {
       return state.addressCache.get(address)!;
     }
-    
+
     // Generate mock address data
     const addressData: Address = {
       address,
@@ -566,7 +634,7 @@ export const GorbchainDataProvider: React.FC<GorbchainDataProviderProps> = ({
       transactions: Array.from(state.transactionCache.values()).slice(0, 10),
       type: 'wallet'
     };
-    
+
     dispatch({ type: 'CACHE_ADDRESS', payload: { address, data: addressData } });
     return addressData;
   };
@@ -596,33 +664,45 @@ export const GorbchainDataProvider: React.FC<GorbchainDataProviderProps> = ({
     };
   };
 
+  const fetchTxChartData = async () => {
+    try {
+      const response = await fetch('https://api.gorbscan.com/api/tx/chart-data');
+      const data = await response.json();
+      dispatch({ type: 'SET_TX_CHART_DATA', payload: data.data });
+      return data;
+    } catch (err) {
+      dispatch({ type: 'SET_TX_CHART_DATA', payload: null });
+      return null;
+    }
+  };
+
   const search = async (query: string) => {
     const blocks = Array.from(state.blockCache.values()).filter(b =>
       b.blockNumber.toString().includes(query) ||
       b.hash.toLowerCase().includes(query.toLowerCase())
     ).slice(0, 10);
-    
+
     const transactions = Array.from(state.transactionCache.values()).filter(t =>
       t.signature.toLowerCase().includes(query.toLowerCase()) ||
       t.signer.toLowerCase().includes(query.toLowerCase()) ||
       t.recipient.toLowerCase().includes(query.toLowerCase())
     ).slice(0, 10);
-    
+
     return { blocks, transactions, addresses: [] };
   };
 
   const refreshData = async () => {
     dispatch({ type: 'SET_LOADING', payload: true });
-    
+
     // Simulate refresh
     await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    const blocks = generateMockBlocks(200);
-    const transactions = generateMockTransactions(500);
-    
+
+    const blocks = await getBlocks(200);
+    const transactions = await getTransactions(500);
+
     dispatch({ type: 'SET_BLOCKS', payload: { blocks: blocks.slice(0, 10), total: blocks.length } });
     dispatch({ type: 'SET_TRANSACTIONS', payload: { transactions: transactions.slice(0, 10), total: transactions.length } });
-    
+
     dispatch({ type: 'SET_LOADING', payload: false });
   };
 
@@ -635,6 +715,7 @@ export const GorbchainDataProvider: React.FC<GorbchainDataProviderProps> = ({
     fetchL2Chains,
     fetchAddress,
     fetchChartData,
+    fetchTxChartData,
     search,
     refreshData,
   };
@@ -655,4 +736,4 @@ export const useGorbchainData = () => {
   return context;
 };
 
-export default GorbchainDataContext; 
+export default GorbchainDataContext;

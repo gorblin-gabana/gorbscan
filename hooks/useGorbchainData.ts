@@ -1,52 +1,54 @@
 "use client";
 
 import { useEffect, useState, useCallback } from 'react';
-import { 
-  gorbchainApi, 
-  Block, 
-  Transaction, 
-  L2Chain, 
-  NetworkStats, 
-  Address, 
-  ChartData 
+import {
+  gorbchainApi,
+  Block,
+  Transaction,
+  L2Chain,
+  NetworkStats,
+  Address,
+  ChartData
 } from '@/services/gorbchainApi';
+
+const BASE_URL = process.env.NEXT_PUBLIC_FRONTEND_URL
 
 interface UseGorbchainDataReturn {
   // Network stats
   networkStats: NetworkStats;
-  
+
   // Blocks
   latestBlocks: Block[];
   getBlocks: (page?: number, limit?: number) => Promise<{ blocks: Block[]; total: number }>;
   getBlock: (blockNumber: number) => Promise<Block | null>;
-  
+
   // Transactions
   latestTransactions: Transaction[];
   getTransactions: (page?: number, limit?: number, filters?: { status?: string; search?: string }) => Promise<{ transactions: Transaction[]; total: number }>;
   getTransaction: (signature: string) => Promise<Transaction | null>;
-  
+
   // L2 Chains
   l2Chains: L2Chain[];
   getL2Chains: (filters?: { status?: string }) => Promise<L2Chain[]>;
   getL2Chain: (chainId: string) => Promise<L2Chain | null>;
-  
+
   // Address
   getAddress: (address: string) => Promise<Address | null>;
-  
+
   // Charts
   getChartData: () => Promise<ChartData>;
-  
+
   // Search
   search: (query: string) => Promise<{
     blocks: Block[];
     transactions: Transaction[];
     addresses: string[];
   }>;
-  
+
   // Loading states
   loading: boolean;
   initialized: boolean;
-  
+
   // Utility
   refreshData: () => Promise<void>;
 }
@@ -62,7 +64,7 @@ export const useGorbchainData = (): UseGorbchainDataReturn => {
     networkUptime: '0%',
     avgCommission: '0%'
   });
-  
+
   const [latestBlocks, setLatestBlocks] = useState<Block[]>([]);
   const [latestTransactions, setLatestTransactions] = useState<Transaction[]>([]);
   const [l2Chains, setL2Chains] = useState<L2Chain[]>([]);
@@ -74,10 +76,10 @@ export const useGorbchainData = (): UseGorbchainDataReturn => {
     const initializeData = async () => {
       try {
         setLoading(true);
-        
+
         // Initialize the API service
         await gorbchainApi.initialize();
-        
+
         // Load initial data
         const [stats, blocks, transactions, chains] = await Promise.all([
           gorbchainApi.getNetworkStats(),
@@ -85,7 +87,7 @@ export const useGorbchainData = (): UseGorbchainDataReturn => {
           gorbchainApi.getLatestTransactions(10),
           gorbchainApi.getL2Chains()
         ]);
-        
+
         setNetworkStats(stats);
         setLatestBlocks(blocks.blocks);
         setLatestTransactions(transactions);
@@ -158,7 +160,9 @@ export const useGorbchainData = (): UseGorbchainDataReturn => {
 
   const getAddress = useCallback(async (address: string) => {
     try {
-      return await gorbchainApi.getAddress(address);
+      const responce = await fetch(`${BASE_URL}/api/tx/transactions/${address}`);
+      const res = await responce.json();
+      return res;
     } catch (error) {
       console.error('Failed to get address:', error);
       return null;
@@ -201,10 +205,10 @@ export const useGorbchainData = (): UseGorbchainDataReturn => {
   const refreshData = useCallback(async () => {
     try {
       setLoading(true);
-      
+
       // Refresh the API service data
       await gorbchainApi.refreshData();
-      
+
       // Reload initial data
       const [stats, blocks, transactions, chains] = await Promise.all([
         gorbchainApi.getNetworkStats(),
@@ -212,7 +216,7 @@ export const useGorbchainData = (): UseGorbchainDataReturn => {
         gorbchainApi.getLatestTransactions(10),
         gorbchainApi.getL2Chains()
       ]);
-      
+
       setNetworkStats(stats);
       setLatestBlocks(blocks.blocks);
       setLatestTransactions(transactions);
@@ -230,7 +234,7 @@ export const useGorbchainData = (): UseGorbchainDataReturn => {
     latestBlocks,
     latestTransactions,
     l2Chains,
-    
+
     // API functions
     getBlocks,
     getBlock,
@@ -241,11 +245,11 @@ export const useGorbchainData = (): UseGorbchainDataReturn => {
     getAddress,
     getChartData,
     search,
-    
+
     // State
     loading,
     initialized,
-    
+
     // Utility
     refreshData
   };

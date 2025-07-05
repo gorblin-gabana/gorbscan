@@ -4,13 +4,61 @@ import React, { useState, useEffect } from 'react';
 import { StatBox } from '@/components/atoms/StatBox';
 import { Tag } from '@/components/atoms/Tag';
 import { Button } from '@/components/ui/button';
-import { TransactionRow } from '@/components/molecules/TransactionRow';
 import { useGorbchainData } from '@/hooks/useGorbchainData';
 import { Copy, Check, ExternalLink, Wallet, Activity, TrendingUp, Coins } from 'lucide-react';
+import WalletInfo from '@/components/organisms/WalletInfo';
 
 interface AddressDetailsProps {
   address: string;
 }
+
+function shorten(str: string, start = 6, end = 6) {
+  if (!str || str.length <= start + end) return str;
+  return `${str.slice(0, start)}...${str.slice(-end)}`;
+}
+
+const TransactionRowCustom: React.FC<{ tx: any }> = ({ tx }) => {
+  const [copied, setCopied] = useState(false);
+  const signature = tx?.transaction?.signatures?.[0] || '';
+  const slot = tx?.slot;
+  const blockTime = tx?.blockTime;
+  const status = tx?.meta?.err === null ? 'success' : 'error';
+  const fee = tx?.meta?.fee;
+  const computeUnits = tx?.meta?.computeUnitsConsumed;
+  const validator = tx?.transaction?.message?.accountKeys?.[0]?.pubkey || tx?.transaction?.message?.accountKeys?.[0] || '';
+
+  const handleCopy = async () => {
+    if (!signature) return;
+    await navigator.clipboard.writeText(signature);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
+
+  return (
+    <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-2 p-4 bg-card/50 rounded-lg border border-border">
+      <div className="flex flex-col md:flex-row md:items-center gap-2 w-full md:w-auto">
+        <span className="font-mono text-xs text-muted-foreground">Slot: {slot ?? 'N/A'}</span>
+        <span className="font-mono text-xs text-muted-foreground">Validator: {shorten(validator)}</span>
+      </div>
+      <div className="flex items-center gap-2 w-full md:w-auto">
+        <span className="font-mono text-xs text-foreground">{shorten(signature, 8, 8)}</span>
+        <button
+          onClick={handleCopy}
+          className="p-1 rounded hover:bg-muted transition-colors"
+          title="Copy signature"
+        >
+          {copied ? <Check className="w-3 h-3 text-gorb-green" /> : <Copy className="w-3 h-3 text-muted-foreground" />}
+        </button>
+      </div>
+      <div className="flex flex-col md:flex-row md:items-center gap-2 w-full md:w-auto">
+        <Tag status={status === 'success' ? 'success' : 'error'}>{status === 'success' ? 'Success' : 'Failed'}</Tag>
+        <span className="font-mono text-xs text-muted-foreground">Fee: {fee ?? 'N/A'}</span>
+        <span className="font-mono text-xs text-muted-foreground">CU: {computeUnits ?? 'N/A'}</span>
+        <span className="font-mono text-xs text-muted-foreground">{blockTime ? new Date(blockTime * 1000).toLocaleString() : 'N/A'}</span>
+      </div>
+    </div>
+  );
+};
 
 export const AddressDetails: React.FC<AddressDetailsProps> = ({ address }) => {
   const { getAddress, loading } = useGorbchainData();
@@ -23,7 +71,6 @@ export const AddressDetails: React.FC<AddressDetailsProps> = ({ address }) => {
       const data = await getAddress(address);
       setAddressData(data);
     };
-    
     loadAddressData();
   }, [address, getAddress]);
 
@@ -39,7 +86,6 @@ export const AddressDetails: React.FC<AddressDetailsProps> = ({ address }) => {
         <div className="animate-pulse">
           <div className="h-8 bg-muted rounded w-1/3 mb-4"></div>
           <div className="h-4 bg-muted rounded w-1/2 mb-8"></div>
-          
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             {Array.from({ length: 4 }).map((_, i) => (
               <div key={i} className="gorb-card p-6">
@@ -48,7 +94,6 @@ export const AddressDetails: React.FC<AddressDetailsProps> = ({ address }) => {
               </div>
             ))}
           </div>
-          
           <div className="gorb-card p-6">
             <div className="h-4 bg-muted rounded w-1/4 mb-4"></div>
             <div className="space-y-2">
@@ -61,9 +106,10 @@ export const AddressDetails: React.FC<AddressDetailsProps> = ({ address }) => {
     );
   }
 
+  // Tabs: Only show tokens if present, else fallback to empty array
   const tabs = [
-    { id: 'transactions', label: 'Transactions', count: addressData.transactions.length },
-    { id: 'tokens', label: 'Token Holdings', count: addressData.tokenHoldings.length },
+    { id: 'transactions', label: 'Transactions', count: addressData.allTx?.length || 0 },
+    { id: 'tokens', label: 'Token Holdings', count: addressData.tokenHoldings?.length || 0 },
     { id: 'nfts', label: 'NFTs', count: 0 },
     { id: 'defi', label: 'DeFi Positions', count: 0 }
   ];
@@ -99,65 +145,13 @@ export const AddressDetails: React.FC<AddressDetailsProps> = ({ address }) => {
         </div>
       </div>
 
-      {/* Balance Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatBox
-          label="GORB Balance"
-          value={addressData.balance}
-          icon={Wallet}
-        />
-        <StatBox
-          label="USD Value"
-          value={addressData.balanceUSD}
-          icon={TrendingUp}
-          trend={{ value: 12.5, isPositive: true }}
-        />
-        <StatBox
-          label="Total Transactions"
-          value={addressData.transactions.length.toLocaleString()}
-          icon={Activity}
-        />
-        <StatBox
-          label="Token Holdings"
-          value={addressData.tokenHoldings.length}
-          icon={Coins}
-        />
-      </div>
-
-      {/* Address Info */}
-      <div className="gorb-card p-6">
-        <h3 className="text-lg font-semibold text-foreground mb-4">Address Information</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="space-y-3">
-            <div className="flex justify-between">
-              <span className="text-sm text-muted-foreground">Full Address:</span>
-              <div className="flex items-center gap-2">
-                <span className="font-mono text-sm text-foreground">{address}</span>
-                <button
-                  onClick={handleCopy}
-                  className="p-1 rounded hover:bg-muted transition-colors"
-                >
-                  <Copy className="w-3 h-3 text-muted-foreground" />
-                </button>
-              </div>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-sm text-muted-foreground">First Seen:</span>
-              <span className="text-sm text-foreground">Jan 15, 2024</span>
-            </div>
-          </div>
-          <div className="space-y-3">
-            <div className="flex justify-between">
-              <span className="text-sm text-muted-foreground">Last Activity:</span>
-              <span className="text-sm text-foreground">{addressData.transactions[0]?.timestamp || 'Never'}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-sm text-muted-foreground">Address Type:</span>
-              <Tag status="info">{addressData.type?.toUpperCase() || 'WALLET'}</Tag>
-            </div>
-          </div>
+      {/* Wallet Info */}
+      {addressData.accountInfo && (
+        <div className="gorb-card p-6">
+          <h3 className="text-lg font-semibold text-foreground mb-4">Wallet Information</h3>
+          <WalletInfo accountInfo={addressData.accountInfo} />
         </div>
-      </div>
+      )}
 
       {/* Tabs */}
       <div className="gorb-card p-6">
@@ -166,11 +160,10 @@ export const AddressDetails: React.FC<AddressDetailsProps> = ({ address }) => {
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`pb-3 px-1 text-sm font-medium transition-colors flex items-center gap-2 ${
-                activeTab === tab.id
-                  ? 'text-primary border-b-2 border-primary'
-                  : 'text-muted-foreground hover:text-foreground'
-              }`}
+              className={`pb-3 px-1 text-sm font-medium transition-colors flex items-center gap-2 ${activeTab === tab.id
+                ? 'text-primary border-b-2 border-primary'
+                : 'text-muted-foreground hover:text-foreground'
+                }`}
             >
               {tab.label}
               {tab.count > 0 && (
@@ -192,10 +185,11 @@ export const AddressDetails: React.FC<AddressDetailsProps> = ({ address }) => {
               </Button>
             </div>
             <div className="space-y-4">
-              {addressData.transactions.slice(0, 5).map((tx: any) => (
-                <TransactionRow key={tx.signature} {...tx} />
-              ))}
-              {addressData.transactions.length === 0 && (
+              {addressData.allTx && addressData.allTx.length > 0 ? (
+                addressData.allTx.slice(0, 10).map((tx: any, idx: number) => (
+                  <TransactionRowCustom key={tx?.transaction?.signatures?.[0] || idx} tx={tx} />
+                ))
+              ) : (
                 <div className="text-center py-8">
                   <p className="text-muted-foreground">No transactions found for this address</p>
                 </div>
@@ -209,24 +203,25 @@ export const AddressDetails: React.FC<AddressDetailsProps> = ({ address }) => {
           <div className="space-y-4">
             <h3 className="text-lg font-semibold text-foreground">Token Holdings</h3>
             <div className="space-y-3">
-              {addressData.tokenHoldings.map((token: any, index: number) => (
-                <div key={index} className="flex items-center justify-between p-4 bg-card/50 rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
-                      <span className="text-sm font-bold text-primary">{token.symbol[0]}</span>
+              {addressData.tokenHoldings && addressData.tokenHoldings.length > 0 ? (
+                addressData.tokenHoldings.map((token: any, index: number) => (
+                  <div key={index} className="flex items-center justify-between p-4 bg-card/50 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
+                        <span className="text-sm font-bold text-primary">{token.symbol?.[0]}</span>
+                      </div>
+                      <div>
+                        <p className="font-medium text-foreground">{token.symbol}</p>
+                        <p className="text-sm text-muted-foreground">{token.amount}</p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-medium text-foreground">{token.symbol}</p>
-                      <p className="text-sm text-muted-foreground">{token.amount}</p>
+                    <div className="text-right">
+                      <p className="font-medium text-foreground">{token.amountUSD}</p>
+                      <p className="text-sm text-muted-foreground">{token.price}</p>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="font-medium text-foreground">{token.amountUSD}</p>
-                    <p className="text-sm text-muted-foreground">{token.price}</p>
-                  </div>
-                </div>
-              ))}
-              {addressData.tokenHoldings.length === 0 && (
+                ))
+              ) : (
                 <div className="text-center py-8">
                   <p className="text-muted-foreground">No token holdings found for this address</p>
                 </div>

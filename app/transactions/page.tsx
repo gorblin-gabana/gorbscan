@@ -10,9 +10,9 @@ import { useSearchParams } from 'next/navigation';
 import { Filter, ChevronLeft, ChevronRight } from 'lucide-react';
 
 function TransactionsContent() {
-  const { fetchTransactions, initialized } = useGorbchainData();
+  const { fetchTransaction, fetchTransactions, initialized } = useGorbchainData();
   const searchParams = useSearchParams();
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [transactions, setTransactions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState<'all' | 'success' | 'failed' | 'pending'>('all');
@@ -22,21 +22,67 @@ function TransactionsContent() {
   const searchQuery = searchParams.get('search') || '';
   const totalPages = Math.ceil(totalTransactions / itemsPerPage);
 
+  // Helper: map API transaction object to TransactionRow props
+  const mapApiTxToRow = (apiTx: any) => {
+    const instr = apiTx.transaction.message.instructions[0] || {};
+    const accountKeys = apiTx.transaction.message.accountKeys || [];
+    const getAccount = (pubkey: string) => accountKeys.find((a: any) => a.pubkey === pubkey);
+    return {
+      signature: apiTx.transaction.signatures[0],
+      blockNumber: apiTx.slot,
+      timestamp: apiTx.blockTime ? new Date(apiTx.blockTime * 1000).toLocaleString() : '',
+      blockTime: apiTx.blockTime ? new Date(apiTx.blockTime * 1000).toUTCString() : '',
+      status: apiTx.meta?.err === null ? 'success' : 'failed',
+      signer: getAccount(instr.accounts?.[0])?.pubkey || '',
+      recipient: getAccount(instr.accounts?.[1])?.pubkey || '',
+      amount: '', // Not available in this API response
+      amountUSD: '',
+      token: '',
+      fee: apiTx.meta?.fee ? (apiTx.meta.fee / 1e9).toFixed(6) : '',
+      feeUSD: '',
+      computeUnits: apiTx.meta?.computeUnitsConsumed,
+      version: apiTx.version,
+      recentBlockhash: apiTx.transaction.message.recentBlockhash,
+      type: instr.type || '',
+      instructions: apiTx.transaction.message.instructions.map((ix: any) => ({
+        programId: ix.programId,
+        programName: '',
+        instruction: ix.type || '',
+        data: ix.data || '',
+        accounts: (ix.accounts || []).map((pubkey: string) => {
+          const acc = getAccount(pubkey);
+          return {
+            pubkey,
+            isSigner: acc?.signer || false,
+            isWritable: acc?.writable || false
+          };
+        })
+      }))
+    };
+  };
+
   // Load transactions data
   useEffect(() => {
     const loadTransactions = async () => {
       if (!initialized) return;
-      
       try {
         setLoading(true);
-        const filters = {
-          status: statusFilter !== 'all' ? statusFilter : undefined,
-          search: searchQuery || undefined
-        };
-        
-        const response = await fetchTransactions(currentPage, itemsPerPage, filters);
-        setTransactions(response.transactions);
-        setTotalTransactions(response.total);
+        if (searchQuery) {
+          const response = await fetchTransaction(searchQuery);
+          if (response) {
+            setTransactions([mapApiTxToRow(response)]);
+            setTotalTransactions(1);
+          } else {
+            setTransactions([]);
+            setTotalTransactions(0);
+          }
+        } else {
+          // Fetch paginated transactions if no search query
+          // (Assume fetchTransactions returns { transactions, total })
+          const { transactions: txs, total } = await fetchTransactions(currentPage, itemsPerPage, { status: statusFilter !== 'all' ? statusFilter : undefined });
+          setTransactions(txs);
+          setTotalTransactions(total);
+        }
       } catch (error) {
         console.error('Failed to load transactions:', error);
         setTransactions([]);
@@ -45,9 +91,8 @@ function TransactionsContent() {
         setLoading(false);
       }
     };
-
     loadTransactions();
-  }, [currentPage, statusFilter, searchQuery, fetchTransactions, initialized]);
+  }, [currentPage, statusFilter, searchQuery, fetchTransaction, fetchTransactions, initialized]);
 
   // Reset to page 1 when filters change
   useEffect(() => {
@@ -76,7 +121,7 @@ function TransactionsContent() {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      
+
       <main className="relative w-full px-4 sm:px-6 lg:px-8 py-6">
         {/* Status Filters */}
         <div className="flex flex-wrap gap-2 mb-6">
@@ -87,11 +132,10 @@ function TransactionsContent() {
                 setStatusFilter(status as any);
               }}
               disabled={loading}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 ${
-                statusFilter === status
-                  ? 'bg-primary text-primary-foreground'
-                  : 'bg-card text-muted-foreground hover:text-foreground border border-border'
-              }`}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 ${statusFilter === status
+                ? 'bg-primary text-primary-foreground'
+                : 'bg-card text-muted-foreground hover:text-foreground border border-border'
+                }`}
             >
               {status === 'all' ? 'All' : status.charAt(0).toUpperCase() + status.slice(1)} ({count.toLocaleString()})
             </button>
@@ -121,10 +165,10 @@ function TransactionsContent() {
 
         {/* Transactions List */}
         <div className="space-y-4 mb-8">
-          {transactions.map((transaction) => (
+          {transactions.map((transaction: any) => (
             <TransactionRow key={transaction.signature} {...transaction} />
           ))}
-          
+
           {transactions.length === 0 && (
             <div className="text-center py-12">
               <p className="text-muted-foreground">No transactions found matching your criteria.</p>
@@ -138,7 +182,7 @@ function TransactionsContent() {
             <p className="body-sm">
               Page {currentPage} of {totalPages}
             </p>
-            
+
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
@@ -148,7 +192,7 @@ function TransactionsContent() {
                 <ChevronLeft className="icon-sm" />
                 Previous
               </button>
-              
+
               <div className="flex items-center gap-1">
                 {Array.from({ length: Math.min(7, totalPages) }, (_, i) => {
                   let pageNum: number;
@@ -161,26 +205,25 @@ function TransactionsContent() {
                   } else {
                     pageNum = currentPage - 3 + i;
                   }
-                  
+
                   if (pageNum < 1 || pageNum > totalPages) return null;
-                  
+
                   return (
                     <button
                       key={pageNum}
                       onClick={() => setCurrentPage(pageNum)}
                       disabled={loading}
-                      className={`w-8 h-8 rounded text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-                        currentPage === pageNum
-                          ? 'bg-primary text-primary-foreground'
-                          : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-                      }`}
+                      className={`w-8 h-8 rounded text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${currentPage === pageNum
+                        ? 'bg-primary text-primary-foreground'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                        }`}
                     >
                       {pageNum}
                     </button>
                   );
                 })}
               </div>
-              
+
               <button
                 onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                 disabled={currentPage === totalPages || loading}
@@ -212,4 +255,4 @@ export default function TransactionsPage() {
       <TransactionsContent />
     </Suspense>
   );
-} 
+}

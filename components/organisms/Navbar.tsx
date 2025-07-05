@@ -17,13 +17,13 @@ export const Navbar: React.FC = () => {
     if (!searchQuery.trim()) return;
 
     const query = searchQuery.trim();
-    
+
     // Smart routing based on query format
-    if (query.startsWith('0x')) {
+    if (!query.startsWith('0x')) {
       if (query.length === 66) {
         // Transaction hash (64 hex chars + 0x)
         router.push(`/tx/${query}`);
-      } else if (query.length === 42) {
+      } else if (query.length == 44) {
         // Address (40 hex chars + 0x)
         router.push(`/address/${query}`);
       } else {
@@ -100,11 +100,10 @@ export const Navbar: React.FC = () => {
               <Link
                 key={link.href}
                 href={link.href}
-                className={`px-4 py-2 rounded-lg transition-all duration-200 font-medium text-sm focus-visible ${
-                  pathname === link.href
+                className={`px-4 py-2 rounded-lg transition-all duration-200 font-medium text-sm focus-visible ${pathname === link.href
                     ? 'bg-primary text-primary-foreground shadow-glow'
                     : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-                }`}
+                  }`}
               >
                 {link.label}
               </Link>
@@ -112,7 +111,7 @@ export const Navbar: React.FC = () => {
           </div>
 
           {/* Mobile Menu Button */}
-          <button 
+          <button
             className="btn-ghost btn-sm lg:hidden"
             onClick={() => setIsMenuOpen(!isMenuOpen)}
             aria-label="Toggle menu"
@@ -152,11 +151,10 @@ export const Navbar: React.FC = () => {
                 <Link
                   key={link.href}
                   href={link.href}
-                  className={`block px-4 py-3 rounded-lg transition-all duration-200 font-medium focus-visible ${
-                    pathname === link.href
+                  className={`block px-4 py-3 rounded-lg transition-all duration-200 font-medium focus-visible ${pathname === link.href
                       ? 'bg-primary text-primary-foreground'
                       : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-                  }`}
+                    }`}
                   onClick={() => setIsMenuOpen(false)}
                 >
                   {link.label}

@@ -15,62 +15,66 @@ export const HeroSection: React.FC = () => {
           Explore Gorbchain
         </h2>
         <p className="text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
-          The most advanced blockchain explorer for Gorbchain and its thriving L2 ecosystem. 
+          The most advanced blockchain explorer for Gorbchain and its thriving L2 ecosystem.
           Track transactions, explore blocks, and monitor network activity in real-time.
         </p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-        <StatBox 
-          label="Network TPS" 
-          value={loading ? "..." : networkStats.networkTPS}
+        <StatBox
+          label="Network TPS"
+          value={loading ? "..." : networkStats?.networkHealth?.tps?.toFixed(2) ?? "N/A"}
           icon={Zap}
-          tooltip="Transactions per second across all L2 chains"
+          tooltip="Transactions per second (TPS)"
         />
-        <StatBox 
-          label="Active L2 Chains" 
-          value={loading ? "..." : networkStats.totalL2Chains}
+        <StatBox
+          label="Active Wallets Today"
+          value={loading ? "..." : networkStats?.activeWalletsToday?.toLocaleString() ?? "N/A"}
           icon={Users}
-          tooltip="Number of active Layer 2 solutions"
+          tooltip="Number of unique wallets active today"
         />
-        <StatBox 
-          label="Total Blocks" 
-          value={loading ? "..." : networkStats.totalBlocks}
+        <StatBox
+          label="Current Slot"
+          value={loading ? "..." : networkStats?.currentSlot?.toLocaleString() ?? "N/A"}
           icon={Activity}
-          tooltip="Total blocks processed since genesis"
+          tooltip="Current Solana slot number"
         />
-        <StatBox 
-          label="Total Value Locked" 
-          value={loading ? "..." : networkStats.totalValueLocked}
-          icon={TrendingUp}
-          tooltip="Combined TVL across all L2 chains"
+        <StatBox
+          label="Circulating Supply"
+          value={loading
+            ? "..."
+            : networkStats?.supply?.total !== undefined
+              ? `${(Number(networkStats.supply.total) / 10**6).toLocaleString(undefined, { maximumFractionDigits: 2 })} M`
+              : "N/A"}
+          icon={DollarSign}
+          tooltip="Current circulating supply of GORB (in millions)"
         />
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 mt-6">
-        <StatBox 
-          label="Market Cap" 
-          value={loading ? "..." : networkStats.marketCap}
-          icon={DollarSign}
-          tooltip="Current market valuation"
-        />
-        <StatBox 
-          label="Network Uptime" 
-          value={loading ? "..." : networkStats.networkUptime}
-          icon={Activity}
-          tooltip="Network availability in the last 30 days"
-        />
-        <StatBox 
-          label="Avg Block Time" 
-          value={loading ? "..." : networkStats.avgBlockTime}
-          icon={Clock}
-          tooltip="Average time between block production"
-        />
-        <StatBox 
-          label="Avg Commission" 
-          value={loading ? "..." : networkStats.avgCommission}
+        <StatBox
+          label="Total Transactions"
+          value={loading ? "..." : networkStats?.totalTransactions?.toLocaleString() ?? "N/A"}
           icon={TrendingUp}
-          tooltip="Average commission rate across the network"
+          tooltip="Total transactions processed on Gorbchain"
+        />
+        <StatBox
+          label="Success Rate"
+          value={loading ? "..." : networkStats?.networkHealth?.successRate !== undefined ? `${(networkStats.networkHealth.successRate * 100).toFixed(2)}%` : "N/A"}
+          icon={TrendingUp}
+          tooltip="Transaction success rate"
+        />
+        <StatBox
+          label="Token Count"
+          value={loading ? "..." : networkStats?.tokenCount?.toLocaleString() ?? "N/A"}
+          icon={TrendingUp}
+          tooltip="Number of tokens on Gorbchain"
+        />
+        <StatBox
+          label="Block Time (ms)"
+          value={loading ? "..." : networkStats?.networkHealth?.blockTime?.toLocaleString() ?? "N/A"}
+          icon={Clock}
+          tooltip="Average block time in milliseconds"
         />
       </div>
     </section>

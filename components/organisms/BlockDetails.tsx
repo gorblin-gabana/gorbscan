@@ -9,6 +9,7 @@ import { DetailRow } from '@/components/molecules/DetailRow';
 import { TransactionRow } from '@/components/molecules/TransactionRow';
 import { useGorbchainData } from '@/contexts/GorbchainDataContext';
 import { Block, Transaction } from '@/contexts/GorbchainDataContext';
+import { BlockTransactionRow } from '../molecules/BlockTransaction';
 
 interface BlockDetailsProps {
   blockNumber: string;
@@ -24,20 +25,37 @@ export const BlockDetails: React.FC<BlockDetailsProps> = ({ blockNumber }) => {
   useEffect(() => {
     const loadBlockData = async () => {
       if (!initialized) return;
-      
+
       try {
         setLoading(true);
-        
+
         // Load block data
-        const block = await fetchBlock(parseInt(blockNumber));
-        setBlockData(block);
-        
-        // For now, we'll get recent transactions since we don't have block-specific filtering
-        // In a real implementation, the API would filter by block number
-        const transactionsResponse = await fetchTransactions(1, 10);
-        const blockTxs = transactionsResponse.transactions.filter(
-          (tx: Transaction) => tx.blockNumber === parseInt(blockNumber)
-        );
+        const block: any = await fetchBlock(parseInt(blockNumber));
+        if (!block) {
+          setBlockData(null);
+          setBlockTransactions([]);
+          setLoading(false);
+          return;
+        }
+
+        // Adapt block data from API response
+        const blockInfo = {
+          blockNumber: block.slot,
+          timestamp: block.blockTime ? new Date(block.blockTime * 1000).toLocaleString() : '',
+          transactionCount: block.transactionCount,
+          validator: block.transactions?.[0]?.transaction?.message?.accountKeys?.[0] || '',
+          reward: '', // Not available in response
+          gasUsed: block.transactions?.[0]?.meta?.computeUnitsConsumed?.toString() || '',
+          hash: block.blockhash,
+          parentHash: block.previousBlockhash,
+          size: '', // Not available in response
+          difficulty: '', // Not available in response
+        };
+        setBlockData(blockInfo);
+
+        // Transactions in block
+        const blockTxs = block.transactions;
+
         setBlockTransactions(blockTxs);
       } catch (error) {
         console.error('Failed to load block data:', error);
@@ -45,7 +63,7 @@ export const BlockDetails: React.FC<BlockDetailsProps> = ({ blockNumber }) => {
         setLoading(false);
       }
     };
-    
+
     loadBlockData();
   }, [blockNumber, fetchBlock, fetchTransactions, initialized]);
 
@@ -61,7 +79,7 @@ export const BlockDetails: React.FC<BlockDetailsProps> = ({ blockNumber }) => {
         <div className="animate-pulse">
           <div className="h-8 bg-muted rounded w-1/3 mb-4"></div>
           <div className="h-4 bg-muted rounded w-1/2 mb-8"></div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
             {Array.from({ length: 4 }).map((_, i) => (
               <div key={i} className="gorb-card p-6">
@@ -70,7 +88,7 @@ export const BlockDetails: React.FC<BlockDetailsProps> = ({ blockNumber }) => {
               </div>
             ))}
           </div>
-          
+
           <div className="gorb-card p-6">
             <div className="h-4 bg-muted rounded w-1/4 mb-4"></div>
             <div className="space-y-2">
@@ -89,7 +107,7 @@ export const BlockDetails: React.FC<BlockDetailsProps> = ({ blockNumber }) => {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold font-orbitron text-foreground mb-2">
-            Block #{blockData.blockNumber.toLocaleString()}
+            Block #{blockData.blockNumber}
           </h1>
           <div className="flex items-center gap-2">
             <Tag status="success">Finalized</Tag>
@@ -106,22 +124,22 @@ export const BlockDetails: React.FC<BlockDetailsProps> = ({ blockNumber }) => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatBox
           label="Transactions"
-          value={blockData.transactionCount.toString()}
+          value={blockData.transactionCount?.toString() || '0'}
           icon={Zap}
         />
         <StatBox
-          label="Gas Used"
-          value={blockData.gasUsed}
+          label="Gas Used (CU)"
+          value={blockData.gasUsed || 'N/A'}
           icon={Box}
         />
         <StatBox
-          label="Block Reward"
-          value={blockData.reward}
+          label="Validator"
+          value={`${blockData.validator.slice(0, 4)}....${blockData.validator.slice(-4)}` || 'N/A'}
           icon={User}
         />
         <StatBox
-          label="Block Size"
-          value={blockData.size}
+          label="Block Hash"
+          value={blockData.hash ? `${blockData.hash.slice(0, 4)}...${blockData.hash.slice(-4)}` : 'N/A'}
           icon={Hash}
         />
       </div>
@@ -129,7 +147,7 @@ export const BlockDetails: React.FC<BlockDetailsProps> = ({ blockNumber }) => {
       {/* Block Details */}
       <div className="gorb-card p-6">
         <h3 className="text-lg font-semibold text-foreground mb-6">Block Information</h3>
-        
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Left Column */}
           <div className="space-y-1">
@@ -139,48 +157,64 @@ export const BlockDetails: React.FC<BlockDetailsProps> = ({ blockNumber }) => {
               value={
                 <div className="flex items-center gap-2">
                   <span className="font-mono text-sm text-foreground">
-                    {blockData.hash.slice(0, 10)}...{blockData.hash.slice(-8)}
+                    {blockData.hash ? `${blockData.hash.slice(0, 6)}...${blockData.hash.slice(-6)}` : 'N/A'}
                   </span>
-                  <button
-                    onClick={() => handleCopy(blockData.hash)}
-                    className="p-1 rounded hover:bg-muted transition-colors"
-                  >
-                    {copied ? (
-                      <Check className="w-4 h-4 text-gorb-green" />
-                    ) : (
-                      <Copy className="w-4 h-4 text-muted-foreground" />
-                    )}
-                  </button>
+                  {blockData.hash && (
+                    <button
+                      onClick={() => handleCopy(blockData.hash)}
+                      className="p-1 rounded hover:bg-muted transition-colors"
+                      title="Copy block hash"
+                      aria-label="Copy block hash"
+                    >
+                      {copied ? (
+                        <Check className="w-4 h-4 text-gorb-green" />
+                      ) : (
+                        <Copy className="w-4 h-4 text-muted-foreground" />
+                      )}
+                    </button>
+                  )}
                 </div>
               }
             />
-            
+
             <DetailRow
               label="Parent Hash"
-              value={
-                <span className="font-mono text-sm text-foreground">
-                  {blockData.parentHash.slice(0, 10)}...{blockData.parentHash.slice(-8)}
-                </span>
-              }
+              value={<span className="font-mono text-sm text-foreground">{blockData.parentHash || 'N/A'}</span>}
             />
-            
+
             <DetailRow
               icon={Clock}
               label="Timestamp"
               value={
                 <div className="text-right">
-                  <div className="text-sm text-foreground">{blockData.timestamp}</div>
+                  <div className="text-sm text-foreground">{blockData.timestamp || 'N/A'}</div>
                 </div>
               }
             />
-            
+
             <DetailRow
               icon={User}
               label="Validator"
               value={
-                <span className="font-mono text-sm text-foreground">
-                  {blockData.validator}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-sm text-foreground">
+                    {blockData.validator ? `${blockData.validator.slice(0, 6)}...${blockData.validator.slice(-6)}` : 'N/A'}
+                  </span>
+                  {blockData.validator && (
+                    <button
+                      onClick={() => handleCopy(blockData.validator)}
+                      className="p-1 rounded hover:bg-muted transition-colors"
+                      title="Copy validator"
+                      aria-label="Copy validator"
+                    >
+                      {copied ? (
+                        <Check className="w-4 h-4 text-gorb-green" />
+                      ) : (
+                        <Copy className="w-4 h-4 text-muted-foreground" />
+                      )}
+                    </button>
+                  )}
+                </div>
               }
             />
           </div>
@@ -188,27 +222,27 @@ export const BlockDetails: React.FC<BlockDetailsProps> = ({ blockNumber }) => {
           {/* Right Column */}
           <div className="space-y-1">
             <DetailRow
-              label="Gas Used"
+              label="Gas Used (CU)"
               value={
                 <div className="text-right">
                   <div className="text-sm text-foreground">{blockData.gasUsed}</div>
                 </div>
               }
             />
-            
+
             <DetailRow
               label="Block Reward"
-              value={<span className="text-sm text-foreground">{blockData.reward} GORB</span>}
+              value={<span className="text-sm text-foreground">N/A</span>}
             />
-            
+
             <DetailRow
               label="Difficulty"
-              value={<span className="text-sm text-foreground">{blockData.difficulty}</span>}
+              value={<span className="text-sm text-foreground">N/A</span>}
             />
-            
+
             <DetailRow
               label="Block Size"
-              value={<span className="text-sm text-foreground">{blockData.size}</span>}
+              value={<span className="text-sm text-foreground">N/A</span>}
             />
           </div>
         </div>
@@ -228,14 +262,18 @@ export const BlockDetails: React.FC<BlockDetailsProps> = ({ blockNumber }) => {
             )}
           </div>
         </div>
-        
+
         <div className="divide-y divide-border">
-          {blockTransactions.slice(0, 5).map((transaction) => (
-            <div key={transaction.signature} className="p-6">
-              <TransactionRow {...transaction} />
-            </div>
-          ))}
-          
+
+          {
+            blockTransactions.slice(0, 5).map((tx, idx) => (
+              <div key={idx} className="p-6">
+                <BlockTransactionRow transaction={tx} />
+              </div>
+            ))
+
+          }
+
           {blockTransactions.length === 0 && (
             <div className="p-6 text-center text-muted-foreground">
               No transactions found in this block

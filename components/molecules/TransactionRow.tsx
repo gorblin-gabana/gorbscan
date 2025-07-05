@@ -23,10 +23,8 @@ export const TransactionRow: React.FC<TransactionRowProps> = ({
   computeUnits,
   token,
 }) => {
-  // Add safety checks for undefined values
-  if (!signature || !signer || !recipient) {
-    return null;
-  }
+
+
 
   const getStatusClass = (status: string) => {
     switch (status) {
@@ -43,9 +41,9 @@ export const TransactionRow: React.FC<TransactionRowProps> = ({
 
   return (
     <a
-      href={`/tx/${signature}`}
+      href={signature ? `/tx/${signature}` : '#'}
       className="data-row group focus-visible card-cyan-glow"
-      aria-label={`View transaction ${signature.slice(0, 8)}...${signature.slice(-6)}`}
+      aria-label={`View transaction ${signature ? signature.slice(0, 8) : ''}...${signature ? signature.slice(-6) : ''}`}
     >
       <div className="data-row-content">
         {/* Left Section - Transaction Info */}
@@ -55,7 +53,7 @@ export const TransactionRow: React.FC<TransactionRowProps> = ({
           </div>
           <div className="flex-1 min-w-0">
             <h3 className="text-lg font-bold text-foreground font-mono mb-2 truncate">
-              {signature.slice(0, 12)}...{signature.slice(-10)}
+              {signature ? `${signature.slice(0, 12)}...${signature.slice(-10)}` : 'Unknown'}
             </h3>
             <div className="flex items-center gap-6 body-sm">
               <div className="flex items-center gap-2">
@@ -90,7 +88,7 @@ export const TransactionRow: React.FC<TransactionRowProps> = ({
           </div>
           <div className="lg:text-right">
             <p className="text-lg font-bold text-secondary mb-1">
-              {amount || '0'} {token || 'GORB'}
+              {Number(amount) || '0'} {token || 'GORB'}
             </p>
             <p className="caption">
               Transaction Value
