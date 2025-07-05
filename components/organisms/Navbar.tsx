@@ -46,7 +46,6 @@ export const Navbar: React.FC = () => {
   const navLinks = [
     { href: '/blocks', label: 'Blocks' },
     { href: '/transactions', label: 'Transactions' },
-    { href: '/l2-chains', label: 'L2 Chains' },
     { href: '/charts', label: 'Charts' },
   ];
 

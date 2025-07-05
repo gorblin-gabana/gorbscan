@@ -39,15 +39,15 @@ export const HeroSection: React.FC = () => {
           icon={Activity}
           tooltip="Current Solana slot number"
         />
-        <StatBox
+      <StatBox
           label="Circulating Supply"
           value={loading
             ? "..."
             : networkStats?.supply?.total !== undefined
-              ? `${(Number(networkStats.supply.total) / 10**6).toLocaleString(undefined, { maximumFractionDigits: 2 })} M`
+              ? `${(Number(networkStats.supply.total) / 1_000_000_000).toLocaleString(undefined, { maximumFractionDigits: 2 })} B`
               : "N/A"}
           icon={DollarSign}
-          tooltip="Current circulating supply of GORB (in millions)"
+          tooltip="Current circulating supply of GORB (in Billions)"
         />
       </div>
 
