@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
+import { PublicKey, Connection, AccountInfo } from "@solana/web3.js";
 
 
 const BASE_URL = process.env.NEXT_PUBLIC_FRONTEND_URL;
@@ -157,18 +158,14 @@ export interface TxChartData {
   endDate: string;   // ISO date string
 }
 
+const RPC_ENDPOINT = process.env.NEXT_PUBLIC_HTTPS_RPC;
+const WS_ENDPOINT = process.env.NEXT_PUBLIC_WS_ENDPOINT;
+const connection = new Connection(RPC_ENDPOINT || "", {
+  commitment: 'confirmed',
+  wsEndpoint: WS_ENDPOINT,
+  disableRetryOnRateLimit: false,
+});
 
-// ===== MOCK DATA =====
-// export const MOCK_NETWORK_STATS: NetworkStats = {
-//   networkTPS: '2,847',
-//   totalL2Chains: '6',
-//   totalBlocks: '8,429,847',
-//   marketCap: '$2.4B',
-//   totalValueLocked: '$7.25B',
-//   avgBlockTime: '1.2s',
-//   networkUptime: '99.8%',
-//   avgCommission: '2.75%'
-// };
 
 export const getBlocks = async (count: number, startBlock: number = 8429847) => {
 
@@ -184,6 +181,40 @@ export const getBlocks = async (count: number, startBlock: number = 8429847) => 
 
 
 };
+
+export async function isTokenAccount(
+  mintAddress: string,
+): Promise<boolean> {
+  try {
+
+    const publicKey = new PublicKey(mintAddress);
+    const accountInfo = await connection.getAccountInfo(publicKey);
+    console.log("acountinfo", accountInfo)
+
+    if (!accountInfo) {
+      console.log("minted account ")
+      return false
+    }
+    return accountInfo.owner.toBase58() == process.env.NEXT_PUBLIC_PROGRAM_ID;
+  } catch (e: any) {
+
+    console.log("err is token", e)
+    return false;
+  }
+}
+
+export const getTokendataByAddress = async (mintAddress: string) => {
+  try {
+    if (!mintAddress) throw new Error("No mint address provided");
+    const response = await fetch(`${BASE_URL}/api/tokens/mint/${mintAddress}`);
+    if (!response.ok) throw new Error("Failed to fetch token data");
+    const data = await response.json();
+    return data;
+  } catch (err: any) {
+    console.error("getTokendataByAddress error:", err);
+    return null;
+  }
+}
 
 export const getTransactions = async (count: number): Promise<Transaction[]> => {
   try {
@@ -465,6 +496,8 @@ interface GorbchainDataContextType extends DataState {
   fetchTxChartData: () => Promise<TxChartData | null>;
   search: (query: string) => Promise<{ blocks: Block[]; transactions: Transaction[]; addresses: string[] }>;
   refreshData: () => Promise<void>;
+  isTokenAccount: (mintAddress: string) => Promise<boolean>;
+  getTokendataByAddress: (mintAddress: string) => Promise<any>;
 }
 
 const GorbchainDataContext = createContext<GorbchainDataContextType | undefined>(undefined);
@@ -583,16 +616,16 @@ export const GorbchainDataProvider: React.FC<GorbchainDataProviderProps> = ({
     }
   }
   const fetchTransaction = async (signature: string) => {
-   try{
+    try {
       const response = await fetch(`${BASE_URL}/api/tx/${signature}`);
 
       const res = await response.json();
 
       return res;
-   }
-   catch(err:any){
+    }
+    catch (err: any) {
       return null;
-   }
+    }
   };
 
   const fetchL2Chains = async (filters?: { status?: string }) => {
@@ -718,6 +751,8 @@ export const GorbchainDataProvider: React.FC<GorbchainDataProviderProps> = ({
     fetchTxChartData,
     search,
     refreshData,
+    isTokenAccount,
+    getTokendataByAddress
   };
 
   return (

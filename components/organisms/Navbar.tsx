@@ -5,18 +5,26 @@ import { SearchGorbIcon } from '@/components/icons/SearchGorbIcon';
 import { Menu, X } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
+import { useGorbchainData } from '@/contexts/GorbchainDataContext';
 
 export const Navbar: React.FC = () => {
   const pathname = usePathname();
   const router = useRouter();
+  const { isTokenAccount } = useGorbchainData();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
-  const handleSearch = (e: React.FormEvent) => {
+  const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
+    console.log("handle search",)
     if (!searchQuery.trim()) return;
 
     const query = searchQuery.trim();
+    const ist = await isTokenAccount(query)
+
+    console.log("isToken", ist)
+
+    console.log("query Length", query.length)
 
     // Smart routing based on query format
     if (!query.startsWith('0x')) {
@@ -25,7 +33,13 @@ export const Navbar: React.FC = () => {
         router.push(`/tx/${query}`);
       } else if (query.length == 44) {
         // Address (40 hex chars + 0x)
-        router.push(`/address/${query}`);
+        if (await isTokenAccount(query)) {
+          router.push(`/token/${query}`);
+
+        }
+        else {
+          router.push(`/address/${query}`);
+        }
       } else {
         // Generic hex string, could be partial - search transactions
         router.push(`/transactions?search=${encodeURIComponent(query)}`);
@@ -46,6 +60,7 @@ export const Navbar: React.FC = () => {
   const navLinks = [
     { href: '/blocks', label: 'Blocks' },
     { href: '/transactions', label: 'Transactions' },
+    { href: '/l2-chains', label: 'L2 Chains' },
     { href: '/charts', label: 'Charts' },
   ];
 
@@ -100,8 +115,8 @@ export const Navbar: React.FC = () => {
                 key={link.href}
                 href={link.href}
                 className={`px-4 py-2 rounded-lg transition-all duration-200 font-medium text-sm focus-visible ${pathname === link.href
-                    ? 'bg-primary text-primary-foreground shadow-glow'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                  ? 'bg-primary text-primary-foreground shadow-glow'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted'
                   }`}
               >
                 {link.label}
@@ -151,8 +166,8 @@ export const Navbar: React.FC = () => {
                   key={link.href}
                   href={link.href}
                   className={`block px-4 py-3 rounded-lg transition-all duration-200 font-medium focus-visible ${pathname === link.href
-                      ? 'bg-primary text-primary-foreground'
-                      : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                    ? 'bg-primary text-primary-foreground'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted'
                     }`}
                   onClick={() => setIsMenuOpen(false)}
                 >
