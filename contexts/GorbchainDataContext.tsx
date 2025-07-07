@@ -524,13 +524,12 @@ export const GorbchainDataProvider: React.FC<GorbchainDataProviderProps> = ({
         await new Promise(resolve => setTimeout(resolve, 500));
 
         if (useMockData) {
-          // Load mock data
-          const blocks = await getBlocks(200);
-
-          const transactions = await getTransactions(300);
-
-          // Fetch network stats from API
-          const statsResponse = await fetch(`${BASE_URL}/api/analytics/overview`);
+          // Load mock data in parallel
+          const [blocks, transactions, statsResponse] = await Promise.all([
+            getBlocks(25),
+            getTransactions(30),
+            fetch(`${BASE_URL}/api/analytics/overview`)
+          ]);
           const statsData = await statsResponse.json();
           dispatch({ type: 'SET_NETWORK_STATS', payload: statsData });
 
@@ -699,7 +698,7 @@ export const GorbchainDataProvider: React.FC<GorbchainDataProviderProps> = ({
 
   const fetchTxChartData = async () => {
     try {
-      const response = await fetch('https://api.gorbscan.com/api/tx/chart-data');
+      const response = await fetch(`${BASE_URL}/api/tx/chart-data`);
       const data = await response.json();
       dispatch({ type: 'SET_TX_CHART_DATA', payload: data.data });
       return data;
@@ -730,7 +729,7 @@ export const GorbchainDataProvider: React.FC<GorbchainDataProviderProps> = ({
     // Simulate refresh
     await new Promise(resolve => setTimeout(resolve, 1000));
 
-    const blocks = await getBlocks(200);
+    const blocks = await getBlocks(25);
     const transactions = await getTransactions(500);
 
     dispatch({ type: 'SET_BLOCKS', payload: { blocks: blocks.slice(0, 10), total: blocks.length } });
