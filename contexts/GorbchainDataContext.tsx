@@ -527,7 +527,7 @@ export const GorbchainDataProvider: React.FC<GorbchainDataProviderProps> = ({
           // Load mock data in parallel
           const [blocks, transactions, statsResponse] = await Promise.all([
             getBlocks(25),
-            getTransactions(30),
+            getTransactions(300),
             fetch(`${BASE_URL}/api/analytics/overview`)
           ]);
           const statsData = await statsResponse.json();
