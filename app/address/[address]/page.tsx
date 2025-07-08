@@ -2,12 +2,32 @@ import React from 'react';
 import { Navbar } from '@/components/organisms/Navbar';
 import { Footer } from '@/components/organisms/Footer';
 import { AddressDetails } from '@/components/organisms/AddressDetails';
+import type { Metadata, ResolvingMetadata } from 'next'
 
 interface AddressPageProps {
-  params: Promise<{
-    address: string;
-  }>;
+  params: { address: string };
 }
+
+
+type Props = {
+  params: Promise<{ address: string }>
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
+}
+
+
+const getAddress = async (address: string) => {
+  try {
+    const BASE_URL = process.env.NEXT_PUBLIC_FRONTEND_URL
+
+    const responce = await fetch(`${BASE_URL}/api/tx/transactions/${address}`);
+    const res = await responce.json();
+    return res;
+  } catch (error) {
+    return null;
+  }
+};
+
+
 export async function generateMetadata(
   { params, searchParams }: Props,
   parent: ResolvingMetadata
@@ -31,9 +51,9 @@ export async function generateMetadata(
   }
 }
 
+
 export default async function AddressPage({ params }: AddressPageProps) {
   const { address } = await params;
-  
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
