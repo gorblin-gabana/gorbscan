@@ -14,10 +14,46 @@ const orbitron = Orbitron({
 });
 
 export const metadata: Metadata = {
-  title: 'GorbScan - Gorbchain Explorer',
+  title: {
+    default: 'GorbScan - Gorbchain Explorer',
+    template: '%s | GorbScan',
+  },
   description: 'The most comprehensive blockchain explorer for Gorbchain. Track transactions, explore blocks, and monitor network activity in real-time.',
-  keywords: 'blockchain, explorer, gorbchain, gorb, cryptocurrency, transactions, blocks',
+  keywords: [
+    'blockchain',
+    'explorer',
+    'gorbchain',
+    'gorb',
+    'cryptocurrency',
+    'transactions',
+    'blocks',
+    'tokens',
+    'charts',
+    'l2 chains',
+  ],
   authors: [{ name: 'GorbScan Team' }],
+  openGraph: {
+    title: 'GorbScan - Gorbchain Explorer',
+    description: 'The most comprehensive blockchain explorer for Gorbchain. Track transactions, explore blocks, and monitor network activity in real-time.',
+    url: 'https://gorbscan.com/',
+    siteName: 'GorbScan',
+    images: [
+      {
+        url: './assets/gorbexplorer.jpg',
+        width: 800,
+        height: 525,
+        alt: 'GorbScan Logo',
+      },
+    ],
+    locale: 'en_US',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'GorbScan - Gorbchain Explorer',
+    description: 'The most comprehensive blockchain explorer for Gorbchain. Track transactions, explore blocks, and monitor network activity in real-time.',
+    images: ['./assets/gorbexplorer.jpg'],
+  },
 };
 
 export const viewport: Viewport = {

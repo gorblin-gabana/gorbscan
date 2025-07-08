@@ -8,6 +8,28 @@ interface AddressPageProps {
     address: string;
   }>;
 }
+export async function generateMetadata(
+  { params, searchParams }: Props,
+  parent: ResolvingMetadata
+): Promise<Metadata> {
+  // read route params
+  const { address } = await params
+
+  const data = await getAddress(address);
+
+  const balance = Number(data?.accountInfo?.value.lamports ?? 0) / 1_000_000_000;
+
+  // optionally access and extend (rather than replace) parent metadata
+  const previousImages = (await parent).openGraph?.images || []
+
+  return {
+    title: `${address} | Balance ${balance} GORB`,
+    description: `Total transactions ${data.allTx.length || '0'}`,
+    openGraph: {
+      images: ['/some-specific-page-image.jpg', ...previousImages],
+    },
+  }
+}
 
 export default async function AddressPage({ params }: AddressPageProps) {
   const { address } = await params;
