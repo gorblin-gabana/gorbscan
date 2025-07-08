@@ -34,12 +34,21 @@ export async function generateMetadata(
 
   // optionally access and extend (rather than replace) parent metadata
   const previousImages = (await parent).openGraph?.images || []
-
-  return {
+return {
     title: `${address} | Balance ${balance} GORB`,
     description: `Total transactions ${data.allTx.length || '0'}`,
     openGraph: {
-      images: ['/some-specific-page-image.jpg', ...previousImages],
+      images: [
+        {
+          url: 'https://res.cloudinary.com/djhurhtw0/image/upload/v1751962451/gorscan_jjtq0q.jpg',
+          width: 800,
+          height: 525,
+          alt: 'GorbScan Logo',
+        },
+      ],
+    },
+    twitter: {
+      images: ['https://res.cloudinary.com/djhurhtw0/image/upload/v1751962451/gorscan_jjtq0q.jpg'],
     },
   }
 }
