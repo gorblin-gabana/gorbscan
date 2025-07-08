@@ -39,7 +39,7 @@ export const metadata: Metadata = {
     siteName: 'GorbScan',
     images: [
       {
-        url: './assets/gorbexplorer.jpg',
+        url: 'https://res.cloudinary.com/djhurhtw0/image/upload/v1751962451/gorscan_jjtq0q.jpg',
         width: 800,
         height: 525,
         alt: 'GorbScan Logo',
@@ -52,7 +52,7 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'GorbScan - Gorbchain Explorer',
     description: 'The most comprehensive blockchain explorer for Gorbchain. Track transactions, explore blocks, and monitor network activity in real-time.',
-    images: ['./assets/gorbexplorer.jpg'],
+    images: ['https://res.cloudinary.com/djhurhtw0/image/upload/v1751962451/gorscan_jjtq0q.jpg'],
   },
 };
 

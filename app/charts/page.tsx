@@ -22,8 +22,6 @@ export default function ChartsPage() {
 
   const { networkStats, loading, txChartData } = useGorbchainData();
 
-  console.log("chart data +++", txChartData)
-
   const timeframes = [
     { value: '24h', label: '24H' },
     { value: '7d', label: '7D' },
