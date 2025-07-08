@@ -5,15 +5,8 @@ import { AddressDetails } from '@/components/organisms/AddressDetails';
 import type { Metadata, ResolvingMetadata } from 'next'
 
 interface AddressPageProps {
-  params: { address: string };
+  params: Promise<{ address: string }>;
 }
-
-
-type Props = {
-  params: Promise<{ address: string }>
-  searchParams: Promise<{ [key: string]: string | string[] | undefined }>
-}
-
 
 const getAddress = async (address: string) => {
   try {
@@ -29,11 +22,11 @@ const getAddress = async (address: string) => {
 
 
 export async function generateMetadata(
-  { params, searchParams }: Props,
+  { params }: AddressPageProps,
   parent: ResolvingMetadata
 ): Promise<Metadata> {
   // read route params
-  const { address } = await params
+  const { address } = await params;      // await the params promise
 
   const data = await getAddress(address);
 
@@ -53,7 +46,7 @@ export async function generateMetadata(
 
 
 export default async function AddressPage({ params }: AddressPageProps) {
-  const { address } = await params;
+  const { address } = await params;       // await params in the page component as well
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
