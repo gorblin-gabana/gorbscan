@@ -11,7 +11,7 @@ import {
   ChartData
 } from '@/services/gorbchainApi';
 
-const BASE_URL = process.env.NEXT_PUBLIC_FRONTEND_URL
+const BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL
 
 interface UseGorbchainDataReturn {
   // Network stats

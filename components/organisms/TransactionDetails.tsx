@@ -18,7 +18,7 @@ export const TransactionDetails: React.FC<TransactionDetailsProps> = ({ hash }) 
   useEffect(() => {
     setLoading(true);
     setError(null);
-    fetch(`${process.env.NEXT_PUBLIC_FRONTEND_URL}/api/tx/${hash}`)
+    fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/tx/${hash}`)
       .then(async (res) => {
         if (!res.ok) throw new Error('Transaction not found');
         const data = await res.json();

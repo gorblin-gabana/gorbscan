@@ -4,7 +4,7 @@ import React, { createContext, useContext, useReducer, useEffect, ReactNode } fr
 import { PublicKey, Connection, AccountInfo } from "@solana/web3.js";
 
 
-const BASE_URL = process.env.NEXT_PUBLIC_FRONTEND_URL;
+const BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL;
 // ===== TYPES =====
 export interface Block {
   blockNumber: number;
@@ -189,10 +189,7 @@ export async function isTokenAccount(
 
     const publicKey = new PublicKey(mintAddress);
     const accountInfo = await connection.getAccountInfo(publicKey);
-    console.log("acountinfo", accountInfo)
-
     if (!accountInfo) {
-      console.log("minted account ")
       return false
     }
     return accountInfo.owner.toBase58() == process.env.NEXT_PUBLIC_PROGRAM_ID;
@@ -576,7 +573,6 @@ export const GorbchainDataProvider: React.FC<GorbchainDataProviderProps> = ({
   const fetchBlock = async (blockNumber: number) => {
     // Always fetch a single mock block for the requested blockNumber
     const blocks = await getBlock(blockNumber);
-    console.log("block ", blocks)
     return blocks || null;
   };
 

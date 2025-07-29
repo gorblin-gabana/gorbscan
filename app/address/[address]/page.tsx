@@ -10,7 +10,7 @@ interface AddressPageProps {
 
 const getAddress = async (address: string) => {
   try {
-    const BASE_URL = process.env.NEXT_PUBLIC_FRONTEND_URL
+    const BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL
 
     const responce = await fetch(`${BASE_URL}/api/tx/transactions/${address}`);
     const res = await responce.json();

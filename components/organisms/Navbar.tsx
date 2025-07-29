@@ -19,12 +19,7 @@ export const Navbar: React.FC = () => {
     console.log("handle search",)
     if (!searchQuery.trim()) return;
 
-    const query = searchQuery.trim();
-
-    const ist = await isTokenAccount(query)
-
-    console.log("is token account", ist)
-    
+    const query = searchQuery.trim();    
     // Smart routing based on query format
     if (!query.startsWith('0x')) {
       if (query.length === 66) {
