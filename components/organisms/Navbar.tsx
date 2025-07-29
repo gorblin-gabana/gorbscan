@@ -20,14 +20,17 @@ export const Navbar: React.FC = () => {
     if (!searchQuery.trim()) return;
 
     const query = searchQuery.trim();
+
+    const ist = await isTokenAccount(query)
+
+    console.log("is token account", ist)
     
     // Smart routing based on query format
     if (!query.startsWith('0x')) {
       if (query.length === 66) {
         // Transaction hash (64 hex chars + 0x)
         router.push(`/tx/${query}`);
-      } else if (query.length == 44) {
-        // Address (40 hex chars + 0x)
+      } else if (query.length == 44 || query.length === 43) {
         if (await isTokenAccount(query)) {
           router.push(`/token/${query}`);
 

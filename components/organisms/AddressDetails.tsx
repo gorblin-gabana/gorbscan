@@ -137,10 +137,7 @@ export const AddressDetails: React.FC<AddressDetailsProps> = ({ address }) => {
                 <Copy className="w-5 h-5 text-muted-foreground hover:text-foreground" />
               )}
             </button>
-            <Button variant="outline" size="sm" className="flex items-center gap-2">
-              <ExternalLink className="w-4 h-4" />
-              View on Explorer
-            </Button>
+           
           </div>
         </div>
       </div>

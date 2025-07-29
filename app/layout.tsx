@@ -68,6 +68,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="dark">
+      <head>
+        <link rel="icon" href="/assets/logo.png" />
+      </head>
       <body className={`${inter.variable} ${orbitron.variable} font-inter antialiased`}>
         <GorbchainDataProvider useMockData={true}>
           {children}
