@@ -48,7 +48,7 @@ export const TransactionDetails: React.FC<TransactionDetailsProps> = ({ hash }) 
     </button>
   );
 
-  // Helper: parse API response to UI-friendly transaction object
+  // Helper: parse API response to UI-friendly transaction object, including inner instructions
   const parseTransaction = (apiTx: any) => {
     if (!apiTx) return null;
     // If response is an array, use the first item
@@ -57,6 +57,13 @@ export const TransactionDetails: React.FC<TransactionDetailsProps> = ({ hash }) 
     const info = instr?.parsed?.info || {};
     const accountKeys = txObj.transaction.message.accountKeys;
     const getAccount = (pubkey: string) => accountKeys.find((a: any) => a.pubkey === pubkey);
+    // Map inner instructions by index for easy lookup
+    const innerInstructionsMap: Record<number, any[]> = {};
+    if (txObj.meta?.innerInstructions) {
+      txObj.meta.innerInstructions.forEach((ii: any) => {
+        innerInstructionsMap[ii.index] = ii.instructions;
+      });
+    }
     return {
       signature: txObj.transaction.signatures[0],
       blockNumber: txObj.slot,
@@ -73,7 +80,7 @@ export const TransactionDetails: React.FC<TransactionDetailsProps> = ({ hash }) 
       computeUnits: txObj.meta?.computeUnitsConsumed,
       version: txObj.version,
       recentBlockhash: txObj.transaction.message.recentBlockhash,
-      instructions: txObj.transaction.message.instructions.map((inst: any) => ({
+      instructions: txObj.transaction.message.instructions.map((inst: any, idx: number) => ({
         programId: inst.programId,
         programName: inst.program || '',
         instruction: inst.parsed?.type || inst.type || '',
@@ -90,7 +97,19 @@ export const TransactionDetails: React.FC<TransactionDetailsProps> = ({ hash }) 
               isWritable: acc?.writable || false
             };
           }))
-        ]
+        ],
+        // Add inner instructions for this instruction index
+        innerInstructions: (innerInstructionsMap[idx] || []).map((iinstr: any) => {
+          // Try to parse info if available
+          const parsed = iinstr.parsed || {};
+          return {
+            programId: iinstr.programId,
+            programName: iinstr.program || '',
+            instruction: parsed.type || iinstr.type || '',
+            data: iinstr.data || '',
+            info: parsed.info || {},
+          };
+        })
       }))
     };
   };
@@ -132,7 +151,7 @@ export const TransactionDetails: React.FC<TransactionDetailsProps> = ({ hash }) 
               <div className="flex items-center justify-center gap-2 flex-wrap">
                 <span className="caption">Tx ID</span>
                 <code className="font-mono text-sm bg-muted px-2 py-1 rounded">
-                  {tx.signature.slice(0, 10)}...{tx.signature.slice(-10)}
+                  {tx.signature.slice(0, 6)}...{tx.signature.slice(-6)}
                 </code>
                 <CopyButton text={tx.signature} type="signature" />
               </div>
@@ -289,6 +308,57 @@ export const TransactionDetails: React.FC<TransactionDetailsProps> = ({ hash }) 
                     ))}
                   </div>
                 </div>
+
+                {/* Inner Instructions */}
+                {instruction.innerInstructions && instruction.innerInstructions.length > 0 && (
+                  <div className="mt-4 border-t border-border pt-4">
+                    <span className="text-sm font-medium text-muted-foreground block mb-2">Inner Instructions:</span>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {instruction.innerInstructions.map((iinstr: any, iidx: number) => (
+                        <div key={iidx} className="p-3 bg-muted/30 rounded-lg border border-border flex flex-col">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-xs font-semibold text-primary">{iinstr.instruction}</span>
+                            <span className="text-xs text-muted-foreground">{iinstr.programName}</span>
+                          </div>
+                          <div className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
+                            Program ID:
+                            <span className="text-foreground font-mono">
+                              {iinstr.programId && iinstr.programId.length > 20
+                                ? `${iinstr.programId.slice(0, 6)}...${iinstr.programId.slice(-6)}`
+                                : iinstr.programId}
+                            </span>
+                            {iinstr.programId && iinstr.programId.length > 20 && (
+                              <CopyButton text={iinstr.programId} type={`inner-programid-${iinstr.programId}`} />
+                            )}
+                          </div>
+                          {Object.keys(iinstr.info).length > 0 && (
+                            <div className="text-xs text-muted-foreground space-y-1">
+                              {Object.entries(iinstr.info).map(([k, v]) => {
+                                const valueStr = String(v);
+                                // Heuristic: if value looks like a hash (32+ chars, base58/hex), shorten display but allow copy
+                                const isHash = valueStr.length > 20;
+                                return (
+                                  <div key={k} className="flex items-center gap-1">
+                                    <span className="font-medium">{k}:</span>
+                                    <span className="text-foreground font-mono">
+                                      {isHash ? `${valueStr.slice(0, 6)}...${valueStr.slice(-6)}` : valueStr}
+                                    </span>
+                                    {isHash && (
+                                      <CopyButton text={valueStr} type={`innerinfo-${k}-${valueStr}`} />
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                          {iinstr.data && (
+                            <div className="text-xs text-muted-foreground mt-1">Data: <span className="text-foreground">{iinstr.data}</span></div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             ))}
           </div>
