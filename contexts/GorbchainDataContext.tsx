@@ -215,37 +215,38 @@ export const getTokendataByAddress = async (mintAddress: string) => {
 
 export const getTransactions = async (count: number): Promise<Transaction[]> => {
   try {
-    const response = await fetch(`https://api.gorbscan.com/api/tx/latest?limit=${count}`);
+    const response = await fetch(`${BASE_URL}/api/tx/latest?limit=${count}`);
     const data = await response.json();
+    console.log("data", data)
     // Map API response to Transaction[]
     return data.map((item: any) => ({
-      signature: item.transaction.signatures[0],
-      blockNumber: item.slot,
-      timestamp: new Date(item.blockTime * 1000).toISOString(),
-      blockTime: item.blockTime.toString(),
-      status: item.meta.status.Err ? 'failed' : 'success',
-      signer: item.transaction.message.accountKeys[0]?.pubkey || '',
-      recipient: item.transaction.message.instructions[0]?.parsed?.info?.destination || '',
-      amount: (item.transaction.message.instructions[0]?.parsed?.info?.lamports / 1e9).toFixed(6),
+      signature: item.signature,
+      blockNumber: item.blockHeight,
+      timestamp: new Date(item.createdAt).toISOString(),
+      blockTime: item.createdAt,
+      status: item.meta.err ? 'failed' : 'success',
+      signer: item.accountKeys[0]?.pubkey || '',
+      recipient: item.accountKeys[1]?.pubkey || '',
+      amount: '0', // Not available in this response structure
       amountUSD: '', // Not available in API
-      token: 'GORB', // Or parse from instruction if available
+      token: 'GORB', // Default token
       fee: (item.meta.fee / 1e9).toFixed(6),
       feeUSD: '', // Not available in API
       computeUnits: item.meta.computeUnitsConsumed || 0,
-      version: item.transaction.version === 'legacy' ? 0 : 1,
-      recentBlockhash: item.transaction.message.recentBlockhash,
-      type: item.transaction.message.instructions[0]?.parsed?.type || 'transfer',
-      instructions: item.transaction.message.instructions.map((ix: any) => ({
-        programId: ix.programId,
-        programName: ix.program,
-        instruction: ix.parsed?.type || '',
-        data: '', // Not available in API
-        accounts: (item.transaction.message.accountKeys || []).map((acc: any) => ({
+      version: item.version === 'legacy' ? 0 : 1,
+      recentBlockhash: item.blockhash,
+      type: 'transfer', // Default type, could be determined from instructions
+      instructions: item.meta.logMessages?.map((log: string) => ({
+        programId: log.includes('Program ') ? log.split(' ')[1] : '',
+        programName: log.includes('Program ') ? log.split(' ')[1] : '',
+        instruction: log.includes('invoke') ? 'invoke' : log.includes('success') ? 'success' : '',
+        data: '',
+        accounts: item.accountKeys?.map((acc: any) => ({
           pubkey: acc.pubkey,
           isSigner: acc.signer,
           isWritable: acc.writable
-        }))
-      }))
+        })) || []
+      })) || []
     }));
   } catch (err) {
     return [];

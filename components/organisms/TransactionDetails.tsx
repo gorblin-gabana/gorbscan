@@ -1,11 +1,73 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { Copy, Check, ArrowDown } from 'lucide-react';
+import { Copy, Check, ArrowDown, ExternalLink, Clock, Hash, DollarSign, Activity, Users, Shield, FileText, Settings } from 'lucide-react';
 import { Tag } from '@/components/atoms/Tag';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Separator } from '@/components/ui/separator';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
 
 interface TransactionDetailsProps {
   hash: string;
+}
+
+interface ParsedTransaction {
+  signature: string;
+  blockNumber: number;
+  timestamp: string;
+  blockTime: string;
+  status: 'success' | 'failed' | 'pending';
+  signer: string;
+  recipient: string;
+  amount: string;
+  amountUSD: string;
+  token: string;
+  fee: string;
+  feeUSD: string;
+  computeUnits: number;
+  version: number;
+  recentBlockhash: string;
+  instructions: Array<{
+    programId: string;
+    programName: string;
+    instruction: string;
+    data: string;
+    accounts: Array<{
+      pubkey: string;
+      isSigner: boolean;
+      isWritable: boolean;
+    }>;
+    innerInstructions?: Array<{
+      programId: string;
+      programName: string;
+      instruction: string;
+      data: string;
+      info: any;
+    }>;
+  }>;
+  // Additional dynamic fields
+  tokenTransfers?: Array<{
+    mint: string;
+    symbol: string;
+    amount: string;
+    from: string;
+    to: string;
+    decimals: number;
+  }>;
+  balanceChanges?: Array<{
+    account: string;
+    preBalance: string;
+    postBalance: string;
+    change: string;
+  }>;
+  logs?: string[];
+  rewards?: Array<{
+    account: string;
+    amount: string;
+    type: string;
+  }>;
 }
 
 export const TransactionDetails: React.FC<TransactionDetailsProps> = ({ hash }) => {
@@ -13,7 +75,6 @@ export const TransactionDetails: React.FC<TransactionDetailsProps> = ({ hash }) 
   const [transaction, setTransaction] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
 
   useEffect(() => {
     setLoading(true);
@@ -34,10 +95,11 @@ export const TransactionDetails: React.FC<TransactionDetailsProps> = ({ hash }) 
     setTimeout(() => setCopied(null), 2000);
   };
 
-  const CopyButton: React.FC<{ text: string; type: string }> = ({ text, type }) => (
+  const CopyButton: React.FC<{ text: string; type: string; size?: 'sm' | 'md' }> = ({ text, type, size = 'md' }) => (
     <button
       onClick={() => handleCopy(text, type)}
-      className="ml-2 p-1 rounded hover:bg-muted transition-colors flex-shrink-0"
+      className={`p-1 rounded hover:bg-muted transition-colors flex-shrink-0 ${size === 'sm' ? 'ml-1' : 'ml-2'
+        }`}
       title="Copy to clipboard"
     >
       {copied === type ? (
@@ -48,363 +110,491 @@ export const TransactionDetails: React.FC<TransactionDetailsProps> = ({ hash }) 
     </button>
   );
 
-  // Helper: parse API response to UI-friendly transaction object, including inner instructions
-  const parseTransaction = (apiTx: any) => {
+  const formatAddress = (address: string, length: number = 8) => {
+    if (!address) return '';
+    return `${address.slice(0, length)}...${address.slice(-length)}`;
+  };
+
+  const formatAmount = (amount: string, decimals: number = 9) => {
+    const num = parseFloat(amount) / Math.pow(10, decimals);
+    return num.toFixed(6);
+  };
+
+  const parseTransaction = (apiTx: any): ParsedTransaction | null => {
     if (!apiTx) return null;
-    // If response is an array, use the first item
     const txObj = Array.isArray(apiTx) ? apiTx[0] : apiTx;
-    const instr = txObj.transaction.message.instructions[0];
-    const info = instr?.parsed?.info || {};
-    const accountKeys = txObj.transaction.message.accountKeys;
-    const getAccount = (pubkey: string) => accountKeys.find((a: any) => a.pubkey === pubkey);
-    // Map inner instructions by index for easy lookup
-    const innerInstructionsMap: Record<number, any[]> = {};
-    if (txObj.meta?.innerInstructions) {
-      txObj.meta.innerInstructions.forEach((ii: any) => {
-        innerInstructionsMap[ii.index] = ii.instructions;
-      });
-    }
+
+    // Calculate balance changes
+    const preBalances = txObj.meta?.preBalances || [];
+    const postBalances = txObj.meta?.postBalances || [];
+    const balanceChanges = preBalances.map((pre: number, index: number) => {
+      const post = postBalances[index] || 0;
+      const change = post - pre;
+      return {
+        account: txObj.accountKeys?.[index]?.pubkey || '',
+        preBalance: (pre / 1e9).toFixed(6),
+        postBalance: (post / 1e9).toFixed(6),
+        change: (change / 1e9).toFixed(6)
+      };
+    });
+
+    // Parse token transfers from pre/post token balances
+    const preTokenBalances = txObj.meta?.preTokenBalances || [];
+    const postTokenBalances = txObj.meta?.postTokenBalances || [];
+    const tokenTransfers: any[] = [];
+
+    // Simple token transfer detection (can be enhanced)
+    preTokenBalances.forEach((pre: any) => {
+      const post = postTokenBalances.find((p: any) => p.accountIndex === pre.accountIndex);
+      if (post && pre.uiTokenAmount.uiAmount !== post.uiTokenAmount.uiAmount) {
+        tokenTransfers.push({
+          mint: pre.mint,
+          symbol: pre.uiTokenAmount.symbol || 'Unknown',
+          amount: Math.abs(post.uiTokenAmount.uiAmount - pre.uiTokenAmount.uiAmount).toString(),
+          from: pre.uiTokenAmount.uiAmount > post.uiTokenAmount.uiAmount ? txObj.accountKeys[pre.accountIndex]?.pubkey : '',
+          to: pre.uiTokenAmount.uiAmount < post.uiTokenAmount.uiAmount ? txObj.accountKeys[pre.accountIndex]?.pubkey : '',
+          decimals: pre.uiTokenAmount.decimals
+        });
+      }
+    });
+
+    // Determine signer and recipient
+    const signer = txObj.accountKeys?.find((acc: any) => acc.signer)?.pubkey || '';
+    const recipient = txObj.accountKeys?.find((acc: any, index: number) => !acc.signer && index > 0)?.pubkey || '';
+
+    // Parse log messages
+    const logMessages = txObj.meta?.logMessages || [];
+    const programLogs = logMessages.filter((log: string) => log.includes('Program '));
+
+    // Calculate total amount from balance changes
+    const totalAmount = balanceChanges.reduce((sum: number, change: any) => {
+      const changeNum = parseFloat(change.change);
+      return sum + (changeNum > 0 ? changeNum : 0);
+    }, 0);
+
     return {
-      signature: txObj.transaction.signatures[0],
-      blockNumber: txObj.slot,
-      timestamp: txObj.blockTime ? new Date(txObj.blockTime * 1000).toLocaleString() : '',
-      blockTime: txObj.blockTime ? new Date(txObj.blockTime * 1000).toUTCString() : '',
-      status: txObj.meta?.err === null ? 'success' : 'fail',
-      signer: info.source || getAccount(info.source)?.pubkey || '',
-      recipient: info.destination || getAccount(info.destination)?.pubkey || '',
-      amount: info.lamports ? (info.lamports / 1e9).toFixed(6) : '0',
+      signature: txObj.signature || txObj.transaction.signatures[0],
+      blockNumber: txObj.blockHeight || txObj.slot,
+      timestamp: txObj.createdAt ? new Date(txObj.createdAt).toLocaleString() : '',
+      blockTime: txObj.createdAt ? new Date(txObj.createdAt).toUTCString() : '',
+      status: txObj.meta?.err === null ? 'success' : 'failed',
+      signer,
+      recipient,
+      amount: totalAmount.toFixed(6),
       amountUSD: '', // Not available in API
-      token: 'GORB', // Hardcoded for now
+      token: 'GORB',
       fee: txObj.meta?.fee ? (txObj.meta.fee / 1e9).toFixed(6) + ' GORB' : '',
-      feeUSD: '', // Not available in API
-      computeUnits: txObj.meta?.computeUnitsConsumed,
+      feeUSD: '',
+      computeUnits: txObj.meta?.computeUnitsConsumed || 0,
       version: txObj.version,
-      recentBlockhash: txObj.transaction.message.recentBlockhash,
-      instructions: txObj.transaction.message.instructions.map((inst: any, idx: number) => ({
-        programId: inst.programId,
-        programName: inst.program || '',
-        instruction: inst.parsed?.type || inst.type || '',
-        data: inst.data || '',
-        accounts: [
-          ...(inst.parsed?.info?.source ? [{ pubkey: inst.parsed.info.source, isSigner: getAccount(inst.parsed.info.source)?.signer, isWritable: getAccount(inst.parsed.info.source)?.writable }] : []),
-          ...(inst.parsed?.info?.destination ? [{ pubkey: inst.parsed.info.destination, isSigner: getAccount(inst.parsed.info.destination)?.signer, isWritable: getAccount(inst.parsed.info.destination)?.writable }] : []),
-          // For non-parsed instructions, map accounts array
-          ...((inst.accounts || []).map((pubkey: string) => {
-            const acc = getAccount(pubkey);
-            return {
-              pubkey,
-              isSigner: acc?.signer || false,
-              isWritable: acc?.writable || false
-            };
-          }))
-        ],
-        // Add inner instructions for this instruction index
-        innerInstructions: (innerInstructionsMap[idx] || []).map((iinstr: any) => {
-          // Try to parse info if available
-          const parsed = iinstr.parsed || {};
-          return {
-            programId: iinstr.programId,
+      recentBlockhash: txObj.blockhash,
+      instructions: programLogs.map((log: string, idx: number) => {
+        const programMatch = log.match(/Program ([A-Za-z0-9]+)/);
+        const programId = programMatch ? programMatch[1] : '';
+        const isInvoke = log.includes('invoke');
+        const isSuccess = log.includes('success');
+
+        return {
+          programId,
+          programName: programId,
+          instruction: isInvoke ? 'invoke' : isSuccess ? 'success' : 'unknown',
+          data: '',
+          accounts: txObj.accountKeys?.map((acc: any) => ({
+            pubkey: acc.pubkey,
+            isSigner: acc.signer,
+            isWritable: acc.writable
+          })) || [],
+          innerInstructions: txObj.meta?.innerInstructions?.[idx]?.instructions?.map((iinstr: any) => ({
+            programId: iinstr.programId || '',
             programName: iinstr.program || '',
-            instruction: parsed.type || iinstr.type || '',
+            instruction: iinstr.parsed?.type || iinstr.type || '',
             data: iinstr.data || '',
-            info: parsed.info || {},
-          };
-        })
-      }))
+            info: iinstr.parsed?.info || {},
+          })) || []
+        };
+      }),
+      tokenTransfers,
+      balanceChanges,
+      logs: logMessages,
+      rewards: txObj.meta?.rewards?.map((reward: any) => ({
+        account: txObj.accountKeys[reward.accountIndex]?.pubkey || '',
+        amount: (reward.lamports / 1e9).toFixed(6),
+        type: reward.rewardType
+      })) || []
     };
   };
 
   const tx = transaction ? parseTransaction(transaction) : null;
 
   if (loading) {
-    return <div className="flex items-center justify-center h-64 text-muted-foreground">Loading transaction...</div>;
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading transaction...</p>
+        </div>
+      </div>
+    );
   }
+
   if (error) {
-    return <div className="flex items-center justify-center h-64 text-red-500">{error}</div>;
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <div className="text-red-500 mb-4">⚠️</div>
+          <p className="text-red-500">{error}</p>
+        </div>
+      </div>
+    );
   }
+
   if (!tx) {
-    return <div className="flex items-center justify-center h-64 text-muted-foreground">No transaction data.</div>;
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <p className="text-muted-foreground">No transaction data found.</p>
+        </div>
+      </div>
+    );
   }
 
   return (
     <div className="min-h-screen bg-background">
-      <main className="relative w-full px-4 sm:px-6 lg:px-8 py-6">
-        {/* Main Content - Desktop: Side by Side, Mobile: Stacked */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Left: Transaction Amount & Success */}
-          <div className="card-base p-6 relative">
-            {/* Success tag in top right */}
-            <div className="absolute top-4 right-4">
-              <Tag status="success">Success</Tag>
-            </div>
-
-            <div className="text-center mb-6 pr-20">
-              <div className="text-4xl font-bold text-primary mb-2">
-                {tx.amount} {tx.token}
-              </div>
-              <div className="text-lg text-muted-foreground">
-                {tx.amountUSD ? `(~${tx.amountUSD})` : null}
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <div className="flex items-center justify-center gap-2 flex-wrap">
-                <span className="caption">Tx ID</span>
-                <code className="font-mono text-sm bg-muted px-2 py-1 rounded">
-                  {tx.signature.slice(0, 6)}...{tx.signature.slice(-6)}
-                </code>
-                <CopyButton text={tx.signature} type="signature" />
-              </div>
-
-              {/* Transfer Flow - Separate Rows */}
-              <div className="pt-4 border-t border-border">
-                <h4 className="text-sm font-medium text-muted-foreground mb-4 text-center">🔄 Transfer</h4>
-
-                <div className="space-y-3">
-                  {/* From Address */}
-                  <div className="p-3 bg-muted/30 rounded-lg border border-border">
-                    <div className="text-xs text-muted-foreground mb-2">From:</div>
-                    <div className="flex items-center justify-between">
-                      <code className="font-mono text-xs break-all flex-1">
-                        {tx.signer}
-                      </code>
-                      <CopyButton text={tx.signer} type="signer" />
-                    </div>
-                  </div>
-
-                  {/* Arrow */}
-                  <div className="flex justify-center">
-                    <ArrowDown className="w-4 h-4 text-primary" />
-                  </div>
-
-                  {/* To Address */}
-                  <div className="p-3 bg-muted/30 rounded-lg border border-border">
-                    <div className="text-xs text-muted-foreground mb-2">To:</div>
-                    <div className="flex items-center justify-between">
-                      <code className="font-mono text-xs break-all flex-1">
-                        {tx.recipient}
-                      </code>
-                      <CopyButton text={tx.recipient} type="recipient" />
-                    </div>
-                  </div>
-                </div>
-              </div>
+      <main className="relative w-full px-4 sm:px-6 lg:px-8 py-6 max-w-7xl mx-auto">
+        {/* Header Section */}
+        <div className="mb-6">
+          <div className="flex items-center justify-between mb-4">
+            <h1 className="text-2xl font-bold">Transaction Details</h1>
+            <div className="flex items-center gap-2">
+              <Tag status={tx.status === 'success' ? 'success' : 'error'}>
+                {tx.status === 'success' ? 'Success' : 'Failed'}
+              </Tag>
+              <Button variant="outline" size="sm">
+                <ExternalLink className="w-4 h-4 mr-2" />
+                View on Explorer
+              </Button>
             </div>
           </div>
 
-          {/* Right: Details */}
-          <div className="card-base p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="heading-md">🔍 Details</h3>
-            </div>
-
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <span className="text-sm font-medium text-muted-foreground">Block Time:</span>
-                  <div className="text-foreground">{tx.blockTime}</div>
-                </div>
-
-                <div>
-                  <span className="text-sm font-medium text-muted-foreground">Confirmed:</span>
-                  <div className="text-foreground">{tx.timestamp}</div>
-                </div>
-
-                <div>
-                  <span className="text-sm font-medium text-muted-foreground">Fee:</span>
-                  <div className="text-foreground">{tx.fee}</div>
-                  <div className="text-xs text-muted-foreground">({tx.feeUSD})</div>
-                </div>
-
-                <div>
-                  <span className="text-sm font-medium text-muted-foreground">Compute Units:</span>
-                  <div className="text-foreground">{tx.computeUnits} units</div>
-                </div>
-
-                <div>
-                  <span className="text-sm font-medium text-muted-foreground">Version:</span>
-                  <div className="text-foreground">{tx.version}</div>
-                </div>
-
-                <div>
-                  <span className="text-sm font-medium text-muted-foreground">Block Number:</span>
-                  <div className="text-foreground">#{tx.blockNumber}</div>
-                </div>
-              </div>
-
-              <div className="pt-4 border-t border-border">
-                <span className="text-sm font-medium text-muted-foreground block mb-2">Security Ref:</span>
-                <div className="flex items-center flex-wrap gap-2">
-                  <code className="font-mono text-xs bg-muted px-2 py-1 rounded flex-1 min-w-0 break-all">
-                    {tx.recentBlockhash.slice(0, 12)}...{tx.recentBlockhash.slice(-8)}
-                  </code>
-                  <CopyButton text={tx.recentBlockhash} type="blockhash" />
-                </div>
-              </div>
-            </div>
+          {/* Transaction Hash */}
+          <div className="flex items-center gap-2 p-4 bg-muted/50 rounded-lg">
+            <Hash className="w-4 h-4 text-muted-foreground" />
+            <code className="font-mono text-sm flex-1 break-all">{tx.signature}</code>
+            <CopyButton text={tx.signature} type="signature" />
           </div>
         </div>
 
-        {/* Advanced Mode - Raw Program Data (Always Visible) */}
-        <div className="space-y-6 mt-6">
-          {/* Program Instructions */}
-          <div className="card-base p-6">
-            <h3 className="heading-md mb-4">📋 Program Instructions</h3>
-
-            {tx.instructions.map((instruction: any, index: number) => (
-              <div key={index} className="space-y-4">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
-                    <span className="text-sm font-bold text-primary">{index + 1}</span>
-                  </div>
-                  <div>
-                    <span className="text-sm font-medium text-foreground">{instruction.instruction}</span>
-                    <div className="text-xs text-muted-foreground">{instruction.programName}</div>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <div>
-                    <span className="text-sm font-medium text-muted-foreground block mb-2">Program ID:</span>
-                    <div className="flex items-center flex-wrap gap-2">
-                      <code className="font-mono text-xs bg-muted p-2 rounded flex-1 min-w-0 break-all">
-                        {instruction.programId}
-                      </code>
-                      <CopyButton text={instruction.programId} type={`program-${index}`} />
-                    </div>
-                  </div>
-
-                  <div>
-                    <span className="text-sm font-medium text-muted-foreground block mb-2">Instruction Data:</span>
-                    <div className="flex items-center flex-wrap gap-2">
-                      <code className="font-mono text-xs bg-muted p-2 rounded flex-1 min-w-0 break-all">
-                        {instruction.data}
-                      </code>
-                      <CopyButton text={instruction.data} type={`data-${index}`} />
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <span className="text-sm font-medium text-muted-foreground block mb-2">Account Keys:</span>
+        {/* Main Content Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Left Column - Transaction Overview */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Transaction Summary Card */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Activity className="w-5 h-5" />
+                  Transaction Summary
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    {instruction.accounts.map((account: any, accountIndex: number) => (
-                      <div key={accountIndex} className="flex items-center justify-between p-2 bg-muted/50 rounded flex-wrap gap-2">
-                        <div className="flex items-center gap-2 flex-wrap min-w-0 flex-1">
-                          <code className="font-mono text-xs break-all">
-                            {account.pubkey.slice(0, 8)}...{account.pubkey.slice(-6)}
-                          </code>
-                          <CopyButton text={account.pubkey} type={`account-${index}-${accountIndex}`} />
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">Amount</span>
+                      <span className="font-mono font-medium">{tx.amount} {tx.token}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">Fee</span>
+                      <span className="font-mono text-sm">{tx.fee}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">Compute Units</span>
+                      <span className="font-mono text-sm">{tx.computeUnits.toLocaleString()}</span>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">Block</span>
+                      <span className="font-mono text-sm">#{tx.blockNumber}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">Version</span>
+                      <span className="font-mono text-sm">{tx.version}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">Timestamp</span>
+                      <span className="font-mono text-sm">{tx.timestamp}</span>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Token Transfers */}
+            {tx.tokenTransfers && tx.tokenTransfers.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <DollarSign className="w-5 h-5" />
+                    Token Transfers
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {tx.tokenTransfers.map((transfer, index) => (
+                      <div key={index} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 bg-primary/20 rounded-full flex items-center justify-center">
+                            <DollarSign className="w-4 h-4 text-primary" />
+                          </div>
+                          <div>
+                            <div className="font-medium">{formatAmount(transfer.amount, transfer.decimals)} {transfer.symbol}</div>
+                            <div className="text-sm text-muted-foreground">
+                              {transfer.from && `From: ${formatAddress(transfer.from)}`}
+                              {transfer.to && `To: ${formatAddress(transfer.to)}`}
+                            </div>
+                          </div>
                         </div>
-                        <div className="flex gap-2 flex-shrink-0">
-                          {account.isSigner && (
-                            <span className="text-xs px-2 py-1 bg-blue-500/20 text-blue-400 rounded">Signer</span>
-                          )}
-                          {account.isWritable && (
-                            <span className="text-xs px-2 py-1 bg-orange-500/20 text-orange-400 rounded">Writable</span>
-                          )}
+                        <CopyButton text={transfer.mint} type={`token-${index}`} />
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Balance Changes */}
+            {tx.balanceChanges && tx.balanceChanges.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Users className="w-5 h-5" />
+                    Balance Changes
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {tx.balanceChanges.map((change, index) => (
+                      <div key={index} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 bg-blue-500/20 rounded-full flex items-center justify-center">
+                            <Users className="w-4 h-4 text-blue-500" />
+                          </div>
+                          <div>
+                            <div className="font-medium">{formatAddress(change.account)}</div>
+                            <div className="text-sm text-muted-foreground">
+                              {change.preBalance} → {change.postBalance}
+                            </div>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className={`font-mono text-sm ${parseFloat(change.change) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                            {parseFloat(change.change) >= 0 ? '+' : ''}{change.change} GORB
+                          </div>
+                          <CopyButton text={change.account} type={`balance-${index}`} size="sm" />
                         </div>
                       </div>
                     ))}
                   </div>
-                </div>
+                </CardContent>
+              </Card>
+            )}
 
-                {/* Inner Instructions */}
-                {instruction.innerInstructions && instruction.innerInstructions.length > 0 && (
-                  <div className="mt-4 border-t border-border pt-4">
-                    <span className="text-sm font-medium text-muted-foreground block mb-2">Inner Instructions:</span>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {instruction.innerInstructions.map((iinstr: any, iidx: number) => (
-                        <div key={iidx} className="p-3 bg-muted/30 rounded-lg border border-border flex flex-col">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="text-xs font-semibold text-primary">{iinstr.instruction}</span>
-                            <span className="text-xs text-muted-foreground">{iinstr.programName}</span>
+            {/* Program Instructions */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Settings className="w-5 h-5" />
+                  Program Instructions
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {tx.instructions.map((instruction, index) => (
+                    <div key={index} className="border rounded-lg p-4">
+                      <div className="flex items-center gap-3 mb-3">
+                        <Badge variant="outline">#{index + 1}</Badge>
+                        <span className="font-medium">{instruction.instruction}</span>
+                        <Badge variant="secondary">{instruction.programName}</Badge>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
+                        <div>
+                          <span className="text-sm text-muted-foreground">Program ID:</span>
+                          <div className="flex items-center gap-2 mt-1">
+                            <code className="font-mono text-xs bg-muted p-2 rounded flex-1">
+                              {instruction.programId}
+                            </code>
+                            <CopyButton text={instruction.programId} type={`program-${index}`} />
                           </div>
-                          <div className="text-xs text-muted-foreground mb-1 flex items-center gap-1">
-                            Program ID:
-                            <span className="text-foreground font-mono">
-                              {iinstr.programId && iinstr.programId.length > 20
-                                ? `${iinstr.programId.slice(0, 6)}...${iinstr.programId.slice(-6)}`
-                                : iinstr.programId}
-                            </span>
-                            {iinstr.programId && iinstr.programId.length > 20 && (
-                              <CopyButton text={iinstr.programId} type={`inner-programid-${iinstr.programId}`} />
+                        </div>
+                        <div>
+                          <span className="text-sm text-muted-foreground">Accounts:</span>
+                          <div className="mt-1 space-y-1">
+                            {instruction.accounts.slice(0, 3).map((account, accIndex) => (
+                              <div key={accIndex} className="flex items-center gap-2">
+                                <code className="font-mono text-xs">
+                                  {formatAddress(account.pubkey, 6)}
+                                </code>
+                                <div className="flex gap-1">
+                                  {account.isSigner && <Badge variant="outline" className="text-xs">S</Badge>}
+                                  {account.isWritable && <Badge variant="outline" className="text-xs">W</Badge>}
+                                </div>
+                              </div>
+                            ))}
+                            {instruction.accounts.length > 3 && (
+                              <span className="text-xs text-muted-foreground">
+                                +{instruction.accounts.length - 3} more
+                              </span>
                             )}
                           </div>
-                          {Object.keys(iinstr.info).length > 0 && (
-                            <div className="text-xs text-muted-foreground space-y-1">
-                              {Object.entries(iinstr.info).map(([k, v]) => {
-                                const valueStr = String(v);
-                                // Heuristic: if value looks like a hash (32+ chars, base58/hex), shorten display but allow copy
-                                const isHash = valueStr.length > 20;
-                                return (
-                                  <div key={k} className="flex items-center gap-1">
-                                    <span className="font-medium">{k}:</span>
-                                    <span className="text-foreground font-mono">
-                                      {isHash ? `${valueStr.slice(0, 6)}...${valueStr.slice(-6)}` : valueStr}
-                                    </span>
-                                    {isHash && (
-                                      <CopyButton text={valueStr} type={`innerinfo-${k}-${valueStr}`} />
-                                    )}
-                                  </div>
-                                );
-                              })}
-                            </div>
-                          )}
-                          {iinstr.data && (
-                            <div className="text-xs text-muted-foreground mt-1">Data: <span className="text-foreground">{iinstr.data}</span></div>
-                          )}
                         </div>
-                      ))}
+                      </div>
+
+                      {/* Inner Instructions */}
+                      {instruction.innerInstructions && instruction.innerInstructions.length > 0 && (
+                        <div className="mt-3 pt-3 border-t">
+                          <span className="text-sm font-medium text-muted-foreground">Inner Instructions:</span>
+                          <div className="mt-2 space-y-2">
+                            {instruction.innerInstructions.map((inner, innerIndex) => (
+                              <div key={innerIndex} className="bg-muted/50 p-2 rounded text-xs">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-medium">{inner.instruction}</span>
+                                  <span className="text-muted-foreground">{inner.programName}</span>
+                                </div>
+                                {Object.keys(inner.info).length > 0 && (
+                                  <div className="mt-1 text-muted-foreground">
+                                    {Object.entries(inner.info).slice(0, 3).map(([k, v]) => (
+                                      <span key={k} className="mr-3">
+                                        {k}: {String(v).slice(0, 20)}
+                                        {String(v).length > 20 ? '...' : ''}
+                                      </span>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  </div>
-                )}
-              </div>
-            ))}
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
           </div>
 
-          {/* Raw Transaction Data */}
-          <div className="card-base p-6">
-            <h3 className="heading-md mb-4">🔧 Raw Transaction Data</h3>
-            <div className="space-y-4">
-              <div>
-                <span className="text-sm font-medium text-muted-foreground block mb-2">Full Signature:</span>
-                <div className="flex items-center flex-wrap gap-2">
-                  <code className="font-mono text-xs bg-muted p-3 rounded flex-1 min-w-0 break-all">
-                    {tx.signature}
-                  </code>
-                  <CopyButton text={tx.signature} type="fullSignature" />
+          {/* Right Column - Details & Metadata */}
+          <div className="space-y-6">
+            {/* Transaction Details */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Shield className="w-5 h-5" />
+                  Transaction Details
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Blockhash</span>
+                    <div className="flex items-center gap-2">
+                      <code className="font-mono text-xs">
+                        {formatAddress(tx.recentBlockhash, 8)}
+                      </code>
+                      <CopyButton text={tx.recentBlockhash} type="blockhash" size="sm" />
+                    </div>
+                  </div>
+                  <Separator />
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">Signer</span>
+                    <div className="flex items-center gap-2">
+                      <code className="font-mono text-xs">
+                        {formatAddress(tx.signer, 6)}
+                      </code>
+                      <CopyButton text={tx.signer} type="signer" size="sm" />
+                    </div>
+                  </div>
+                  {tx.recipient && (
+                    <>
+                      <Separator />
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm text-muted-foreground">Recipient</span>
+                        <div className="flex items-center gap-2">
+                          <code className="font-mono text-xs">
+                            {formatAddress(tx.recipient, 6)}
+                          </code>
+                          <CopyButton text={tx.recipient} type="recipient" size="sm" />
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </div>
-              </div>
+              </CardContent>
+            </Card>
 
-              <div>
-                <span className="text-sm font-medium text-muted-foreground block mb-2">Recent Blockhash:</span>
-                <div className="flex items-center flex-wrap gap-2">
-                  <code className="font-mono text-xs bg-muted p-3 rounded flex-1 min-w-0 break-all">
-                    {tx.recentBlockhash}
-                  </code>
-                  <CopyButton text={tx.recentBlockhash} type="fullBlockhash" />
-                </div>
-              </div>
+            {/* Rewards */}
+            {tx.rewards && tx.rewards.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <DollarSign className="w-5 h-5" />
+                    Rewards
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    {tx.rewards.map((reward, index) => (
+                      <div key={index} className="flex items-center justify-between p-2 bg-muted/30 rounded">
+                        <div>
+                          <div className="text-sm font-medium">{formatAddress(reward.account, 6)}</div>
+                          <div className="text-xs text-muted-foreground">{reward.type}</div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-sm font-medium text-green-600">+{reward.amount} GORB</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
-              <div>
-                <span className="text-sm font-medium text-muted-foreground block mb-2">Compute Budget:</span>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="bg-muted/50 p-3 rounded">
-                    <div className="text-xs text-muted-foreground">Units Consumed</div>
-                    <div className="text-sm font-mono">{tx.computeUnits}</div>
-                  </div>
-                  <div className="bg-muted/50 p-3 rounded">
-                    <div className="text-xs text-muted-foreground">Fee Paid</div>
-                    <div className="text-sm font-mono">{tx.fee}</div>
-                  </div>
-                  <div className="bg-muted/50 p-3 rounded">
-                    <div className="text-xs text-muted-foreground">Version</div>
-                    <div className="text-sm font-mono">{tx.version}</div>
-                  </div>
-                </div>
-              </div>
-            </div>
+            {/* Raw Logs */}
+            {tx.logs && tx.logs.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <FileText className="w-5 h-5" />
+                    Raw Logs
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Tabs defaultValue="logs" className="w-full">
+                    <TabsList className="grid w-full grid-cols-2">
+                      <TabsTrigger value="logs">Logs</TabsTrigger>
+                      <TabsTrigger value="raw">Raw Data</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="logs" className="mt-4">
+                      <div className="max-h-64 overflow-y-auto space-y-1">
+                        {tx.logs.map((log, index) => (
+                          <div key={index} className="text-xs font-mono bg-muted/50 p-2 rounded">
+                            {log}
+                          </div>
+                        ))}
+                      </div>
+                    </TabsContent>
+                    <TabsContent value="raw" className="mt-4">
+                      <div className="max-h-64 overflow-y-auto">
+                        <pre className="text-xs bg-muted/50 p-3 rounded overflow-x-auto">
+                          {JSON.stringify(transaction, null, 2)}
+                        </pre>
+                      </div>
+                    </TabsContent>
+                  </Tabs>
+                </CardContent>
+              </Card>
+            )}
           </div>
         </div>
       </main>
