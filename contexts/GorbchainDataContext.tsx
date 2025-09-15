@@ -249,6 +249,7 @@ export const getTransactions = async (count: number): Promise<Transaction[]> => 
       })) || []
     }));
   } catch (err) {
+    console.error("getTransactions error:", err);
     return [];
   }
 };

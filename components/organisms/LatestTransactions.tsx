@@ -11,6 +11,7 @@ export const LatestTransactions: React.FC = () => {
 
   // Get the latest 5 transactions from the context
   const latestTransactions = transactions.slice(0, 5);
+  console.log("Here latestTransactions", latestTransactions);
 
   if (loading) {
     return (
@@ -22,7 +23,7 @@ export const LatestTransactions: React.FC = () => {
               Real-time transaction activity on the Gorbchain network
             </p>
           </div>
-          
+
           <div className="grid gap-4">
             {Array.from({ length: 5 }).map((_, i) => (
               <div key={i} className="gorb-card p-6 animate-pulse">
@@ -47,12 +48,12 @@ export const LatestTransactions: React.FC = () => {
             Real-time transaction activity on the Gorbchain network and L2 chains
           </p>
         </div>
-        
+
         <div className="grid gap-4">
           {latestTransactions.map((tx) => (
             <TransactionRow key={tx.signature} {...tx} />
           ))}
-          
+
           {latestTransactions.length === 0 && (
             <div className="text-center py-12">
               <p className="text-muted-foreground">No recent transactions available</p>

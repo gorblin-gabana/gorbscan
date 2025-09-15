@@ -131,7 +131,7 @@ export const TransactionDetails: React.FC<TransactionDetailsProps> = ({ hash }) 
       const post = postBalances[index] || 0;
       const change = post - pre;
       return {
-        account: txObj.accountKeys?.[index]?.pubkey || '',
+        account: txObj.accountKeys?.[index]?.pubkey || txObj.transaction.message.accountKeys[index]?.pubkey,
         preBalance: (pre / 1e9).toFixed(6),
         postBalance: (post / 1e9).toFixed(6),
         change: (change / 1e9).toFixed(6)
@@ -159,7 +159,7 @@ export const TransactionDetails: React.FC<TransactionDetailsProps> = ({ hash }) 
     });
 
     // Determine signer and recipient
-    const signer = txObj.accountKeys?.find((acc: any) => acc.signer)?.pubkey || '';
+    const signer = txObj.accountKeys?.find((acc: any) => acc.signer)?.pubkey || txObj.transaction.message.accountKeys[0]?.pubkey;
     const recipient = txObj.accountKeys?.find((acc: any, index: number) => !acc.signer && index > 0)?.pubkey || '';
 
     // Parse log messages
@@ -175,7 +175,7 @@ export const TransactionDetails: React.FC<TransactionDetailsProps> = ({ hash }) 
     return {
       signature: txObj.signature || txObj.transaction.signatures[0],
       blockNumber: txObj.blockHeight || txObj.slot,
-      timestamp: txObj.createdAt ? new Date(txObj.createdAt).toLocaleString() : '',
+      timestamp: txObj.createdAt ? new Date(txObj.createdAt).toLocaleString() : txObj.blockTime ? new Date(txObj.blockTime * 1000).toLocaleString() : '',
       blockTime: txObj.createdAt ? new Date(txObj.createdAt).toUTCString() : '',
       status: txObj.meta?.err === null ? 'success' : 'failed',
       signer,
@@ -187,7 +187,7 @@ export const TransactionDetails: React.FC<TransactionDetailsProps> = ({ hash }) 
       feeUSD: '',
       computeUnits: txObj.meta?.computeUnitsConsumed || 0,
       version: txObj.version,
-      recentBlockhash: txObj.blockhash,
+      recentBlockhash: txObj.blockhash || txObj.transaction.message.recentBlockhash,
       instructions: programLogs.map((log: string, idx: number) => {
         const programMatch = log.match(/Program ([A-Za-z0-9]+)/);
         const programId = programMatch ? programMatch[1] : '';
