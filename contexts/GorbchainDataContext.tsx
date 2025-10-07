@@ -217,7 +217,6 @@ export const getTransactions = async (count: number): Promise<Transaction[]> => 
   try {
     const response = await fetch(`${BASE_URL}/api/tx/latest?limit=${count}`);
     const data = await response.json();
-    console.log("data", data)
     // Map API response to Transaction[]
     return data.map((item: any) => ({
       signature: item.signature,

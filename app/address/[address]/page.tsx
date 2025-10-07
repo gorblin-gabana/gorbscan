@@ -30,13 +30,14 @@ export async function generateMetadata(
 
   const data = await getAddress(address);
 
-  const balance = Number(data?.accountInfo?.value.lamports ?? 0) / 1_000_000_000;
+  const balance = Number(data?.accountInfo?.value?.lamports ?? 0) / 1_000_000_000;
+  const txCount = data?.allTx?.length ?? 0;
 
   // optionally access and extend (rather than replace) parent metadata
   const previousImages = (await parent).openGraph?.images || []
 return {
     title: `${address} | Balance ${balance} GORB`,
-    description: `Total transactions ${data.allTx.length || '0'}`,
+    description: `Total transactions ${txCount}`,
     openGraph: {
       images: [
         {

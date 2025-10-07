@@ -1,13 +1,14 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
-import { Copy, Check, ArrowDown, ExternalLink, Clock, Hash, DollarSign, Activity, Users, Shield, FileText, Settings } from 'lucide-react';
+import { Copy, Check, ExternalLink, Hash, DollarSign, Activity, Users, Shield, FileText, Settings } from 'lucide-react';
 import { Tag } from '@/components/atoms/Tag';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
+import Link from 'next/link';
 
 interface TransactionDetailsProps {
   hash: string;
@@ -118,6 +119,18 @@ export const TransactionDetails: React.FC<TransactionDetailsProps> = ({ hash }) 
   const formatAmount = (amount: string, decimals: number = 9) => {
     const num = parseFloat(amount) / Math.pow(10, decimals);
     return num.toFixed(6);
+  };
+
+  const AddressLink: React.FC<{ address: string; length?: number; className?: string }> = ({ address, length = 8, className = '' }) => {
+    if (!address) return null;
+    return (
+      <Link
+        href={`/address/${address}`}
+        className={`font-mono text-xs hover:text-primary hover:underline transition-colors cursor-pointer ${className}`}
+      >
+        {formatAddress(address, length)}
+      </Link>
+    );
   };
 
   const parseTransaction = (apiTx: any): ParsedTransaction | null => {
@@ -355,9 +368,19 @@ export const TransactionDetails: React.FC<TransactionDetailsProps> = ({ hash }) 
                           </div>
                           <div>
                             <div className="font-medium">{formatAmount(transfer.amount, transfer.decimals)} {transfer.symbol}</div>
-                            <div className="text-sm text-muted-foreground">
-                              {transfer.from && `From: ${formatAddress(transfer.from)}`}
-                              {transfer.to && `To: ${formatAddress(transfer.to)}`}
+                            <div className="text-sm text-muted-foreground flex flex-col gap-1">
+                              {transfer.from && (
+                                <div className="flex items-center gap-1">
+                                  <span>From:</span>
+                                  <AddressLink address={transfer.from} length={6} />
+                                </div>
+                              )}
+                              {transfer.to && (
+                                <div className="flex items-center gap-1">
+                                  <span>To:</span>
+                                  <AddressLink address={transfer.to} length={6} />
+                                </div>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -387,7 +410,7 @@ export const TransactionDetails: React.FC<TransactionDetailsProps> = ({ hash }) 
                             <Users className="w-4 h-4 text-blue-500" />
                           </div>
                           <div>
-                            <div className="font-medium">{formatAddress(change.account)}</div>
+                            <AddressLink address={change.account} className="font-medium" />
                             <div className="text-sm text-muted-foreground">
                               {change.preBalance} → {change.postBalance}
                             </div>
@@ -428,9 +451,9 @@ export const TransactionDetails: React.FC<TransactionDetailsProps> = ({ hash }) 
                         <div>
                           <span className="text-sm text-muted-foreground">Program ID:</span>
                           <div className="flex items-center gap-2 mt-1">
-                            <code className="font-mono text-xs bg-muted p-2 rounded flex-1">
-                              {instruction.programId}
-                            </code>
+                            <div className="bg-muted p-2 rounded flex-1">
+                              <AddressLink address={instruction.programId} length={10} />
+                            </div>
                             <CopyButton text={instruction.programId} type={`program-${index}`} />
                           </div>
                         </div>
@@ -439,9 +462,7 @@ export const TransactionDetails: React.FC<TransactionDetailsProps> = ({ hash }) 
                           <div className="mt-1 space-y-1">
                             {instruction.accounts.slice(0, 3).map((account, accIndex) => (
                               <div key={accIndex} className="flex items-center gap-2">
-                                <code className="font-mono text-xs">
-                                  {formatAddress(account.pubkey, 6)}
-                                </code>
+                                <AddressLink address={account.pubkey} length={6} />
                                 <div className="flex gap-1">
                                   {account.isSigner && <Badge variant="outline" className="text-xs">S</Badge>}
                                   {account.isWritable && <Badge variant="outline" className="text-xs">W</Badge>}
@@ -515,9 +536,7 @@ export const TransactionDetails: React.FC<TransactionDetailsProps> = ({ hash }) 
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">Signer</span>
                     <div className="flex items-center gap-2">
-                      <code className="font-mono text-xs">
-                        {formatAddress(tx.signer, 6)}
-                      </code>
+                      <AddressLink address={tx.signer} length={6} />
                       <CopyButton text={tx.signer} type="signer" size="sm" />
                     </div>
                   </div>
@@ -527,9 +546,7 @@ export const TransactionDetails: React.FC<TransactionDetailsProps> = ({ hash }) 
                       <div className="flex items-center justify-between">
                         <span className="text-sm text-muted-foreground">Recipient</span>
                         <div className="flex items-center gap-2">
-                          <code className="font-mono text-xs">
-                            {formatAddress(tx.recipient, 6)}
-                          </code>
+                          <AddressLink address={tx.recipient} length={6} />
                           <CopyButton text={tx.recipient} type="recipient" size="sm" />
                         </div>
                       </div>
@@ -553,7 +570,7 @@ export const TransactionDetails: React.FC<TransactionDetailsProps> = ({ hash }) 
                     {tx.rewards.map((reward, index) => (
                       <div key={index} className="flex items-center justify-between p-2 bg-muted/30 rounded">
                         <div>
-                          <div className="text-sm font-medium">{formatAddress(reward.account, 6)}</div>
+                          <AddressLink address={reward.account} length={6} className="text-sm font-medium" />
                           <div className="text-xs text-muted-foreground">{reward.type}</div>
                         </div>
                         <div className="text-right">
