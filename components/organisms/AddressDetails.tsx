@@ -4,9 +4,12 @@ import React, { useState, useEffect } from 'react';
 import { StatBox } from '@/components/atoms/StatBox';
 import { Tag } from '@/components/atoms/Tag';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { useGorbchainData } from '@/hooks/useGorbchainData';
 import { Copy, Check, ExternalLink, Wallet, Activity, TrendingUp, Coins } from 'lucide-react';
 import WalletInfo from '@/components/organisms/WalletInfo';
+import { useBlockchainStore } from '@/store/useBlockchainStore';
+import Link from 'next/link';
 
 interface AddressDetailsProps {
   address: string;
@@ -35,28 +38,33 @@ const TransactionRowCustom: React.FC<{ tx: any }> = ({ tx }) => {
   };
 
   return (
-    <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-2 p-4 bg-card/50 rounded-lg border border-border">
-      <div className="flex flex-col md:flex-row md:items-center gap-2 w-full md:w-auto">
-        <span className="font-mono text-xs text-muted-foreground">Slot: {slot ?? 'N/A'}</span>
-        <span className="font-mono text-xs text-muted-foreground">Validator: {shorten(validator)}</span>
+    <Link href={`/tx/${signature}`}>
+      <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-2 p-4 bg-card/50 rounded-lg border border-border hover:bg-card/70 transition-colors cursor-pointer">
+        <div className="flex flex-col md:flex-row md:items-center gap-2 w-full md:w-auto">
+          <span className="font-mono text-xs text-muted-foreground">Slot: {slot ?? 'N/A'}</span>
+          <span className="font-mono text-xs text-muted-foreground">Validator: {shorten(validator)}</span>
+        </div>
+        <div className="flex items-center gap-2 w-full md:w-auto">
+          <span className="font-mono text-xs text-foreground">{shorten(signature, 8, 8)}</span>
+          <button
+            onClick={(e) => {
+              e.preventDefault();
+              handleCopy();
+            }}
+            className="p-1 rounded hover:bg-muted transition-colors"
+            title="Copy signature"
+          >
+            {copied ? <Check className="w-3 h-3 text-gorb-green" /> : <Copy className="w-3 h-3 text-muted-foreground" />}
+          </button>
+        </div>
+        <div className="flex flex-col md:flex-row md:items-center gap-2 w-full md:w-auto">
+          <Tag status={status === 'success' ? 'success' : 'error'}>{status === 'success' ? 'Success' : 'Failed'}</Tag>
+          <span className="font-mono text-xs text-muted-foreground">Fee: {fee ?? 'N/A'}</span>
+          <span className="font-mono text-xs text-muted-foreground">CU: {computeUnits ?? 'N/A'}</span>
+          <span className="font-mono text-xs text-muted-foreground">{blockTime ? new Date(blockTime * 1000).toLocaleString() : 'N/A'}</span>
+        </div>
       </div>
-      <div className="flex items-center gap-2 w-full md:w-auto">
-        <span className="font-mono text-xs text-foreground">{shorten(signature, 8, 8)}</span>
-        <button
-          onClick={handleCopy}
-          className="p-1 rounded hover:bg-muted transition-colors"
-          title="Copy signature"
-        >
-          {copied ? <Check className="w-3 h-3 text-gorb-green" /> : <Copy className="w-3 h-3 text-muted-foreground" />}
-        </button>
-      </div>
-      <div className="flex flex-col md:flex-row md:items-center gap-2 w-full md:w-auto">
-        <Tag status={status === 'success' ? 'success' : 'error'}>{status === 'success' ? 'Success' : 'Failed'}</Tag>
-        <span className="font-mono text-xs text-muted-foreground">Fee: {fee ?? 'N/A'}</span>
-        <span className="font-mono text-xs text-muted-foreground">CU: {computeUnits ?? 'N/A'}</span>
-        <span className="font-mono text-xs text-muted-foreground">{blockTime ? new Date(blockTime * 1000).toLocaleString() : 'N/A'}</span>
-      </div>
-    </div>
+    </Link>
   );
 };
 
@@ -65,14 +73,31 @@ export const AddressDetails: React.FC<AddressDetailsProps> = ({ address }) => {
   const [activeTab, setActiveTab] = useState('transactions');
   const [copied, setCopied] = useState(false);
   const [addressData, setAddressData] = useState<any>(null);
+  const [fromCache, setFromCache] = useState(false);
+
+  const { getAddress: getCachedAddress, setAddress: cacheAddress } = useBlockchainStore();
 
   useEffect(() => {
     const loadAddressData = async () => {
+      // Check cache first
+      const cached = getCachedAddress(address);
+      if (cached) {
+        setAddressData(cached.data);
+        setFromCache(true);
+        return;
+      }
+
+      // Fetch from API
+      setFromCache(false);
       const data = await getAddress(address);
       setAddressData(data);
+      
+      if (data) {
+        cacheAddress(address, data);
+      }
     };
     loadAddressData();
-  }, [address, getAddress]);
+  }, [address, getAddress, getCachedAddress, cacheAddress]);
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(address);
@@ -119,9 +144,16 @@ export const AddressDetails: React.FC<AddressDetailsProps> = ({ address }) => {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold font-orbitron text-foreground mb-2">
-            Address Details
-          </h1>
+          <div className="flex items-center gap-3 mb-2">
+            <h1 className="text-3xl font-bold font-orbitron text-foreground">
+              Address Details
+            </h1>
+            {fromCache && (
+              <Badge variant="secondary" className="text-xs">
+                Cached
+              </Badge>
+            )}
+          </div>
           <div className="flex items-center gap-3">
             <span className="font-mono text-lg text-foreground">
               {address.slice(0, 8)}...{address.slice(-8)}

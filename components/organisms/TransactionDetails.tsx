@@ -9,6 +9,7 @@ import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
+import { useBlockchainStore } from '@/store/useBlockchainStore';
 
 interface TransactionDetailsProps {
   hash: string;
@@ -76,19 +77,42 @@ export const TransactionDetails: React.FC<TransactionDetailsProps> = ({ hash }) 
   const [transaction, setTransaction] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [fromCache, setFromCache] = useState(false);
+
+  const { getTransaction, setTransaction: cacheTransaction } = useBlockchainStore();
 
   useEffect(() => {
-    setLoading(true);
-    setError(null);
-    fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/tx/${hash}`)
-      .then(async (res) => {
+    const fetchTransaction = async () => {
+      // Check cache first
+      const cached = getTransaction(hash);
+      if (cached) {
+        setTransaction(cached.data);
+        setFromCache(true);
+        setLoading(false);
+        return;
+      }
+
+      // Fetch from API
+      setLoading(true);
+      setError(null);
+      setFromCache(false);
+      
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}/api/tx/${hash}`);
         if (!res.ok) throw new Error('Transaction not found');
         const data = await res.json();
+        
         setTransaction(data);
-      })
-      .catch((err) => setError(err.message))
-      .finally(() => setLoading(false));
-  }, [hash]);
+        cacheTransaction(hash, data);
+      } catch (err: any) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTransaction();
+  }, [hash, getTransaction, cacheTransaction]);
 
   const handleCopy = async (text: string, type: string) => {
     await navigator.clipboard.writeText(text);
@@ -283,7 +307,14 @@ export const TransactionDetails: React.FC<TransactionDetailsProps> = ({ hash }) 
         {/* Header Section */}
         <div className="mb-6">
           <div className="flex items-center justify-between mb-4">
-            <h1 className="text-2xl font-bold">Transaction Details</h1>
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl font-bold">Transaction Details</h1>
+              {fromCache && (
+                <Badge variant="secondary" className="text-xs">
+                  Cached
+                </Badge>
+              )}
+            </div>
             <div className="flex items-center gap-2">
               <Tag status={tx.status === 'success' ? 'success' : 'error'}>
                 {tx.status === 'success' ? 'Success' : 'Failed'}
