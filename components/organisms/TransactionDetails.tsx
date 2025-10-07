@@ -143,16 +143,22 @@ export const TransactionDetails: React.FC<TransactionDetailsProps> = ({ hash }) 
     const postTokenBalances = txObj.meta?.postTokenBalances || [];
     const tokenTransfers: any[] = [];
 
+    // Get account keys from either location
+    const accountKeys = txObj.accountKeys || txObj.transaction?.message?.accountKeys || [];
+
     // Simple token transfer detection (can be enhanced)
     preTokenBalances.forEach((pre: any) => {
       const post = postTokenBalances.find((p: any) => p.accountIndex === pre.accountIndex);
       if (post && pre.uiTokenAmount.uiAmount !== post.uiTokenAmount.uiAmount) {
+        const accountAtIndex = accountKeys[pre.accountIndex];
+        const accountPubkey = accountAtIndex?.pubkey || '';
+
         tokenTransfers.push({
           mint: pre.mint,
           symbol: pre.uiTokenAmount.symbol || 'Unknown',
           amount: Math.abs(post.uiTokenAmount.uiAmount - pre.uiTokenAmount.uiAmount).toString(),
-          from: pre.uiTokenAmount.uiAmount > post.uiTokenAmount.uiAmount ? txObj.accountKeys[pre.accountIndex]?.pubkey : '',
-          to: pre.uiTokenAmount.uiAmount < post.uiTokenAmount.uiAmount ? txObj.accountKeys[pre.accountIndex]?.pubkey : '',
+          from: pre.uiTokenAmount.uiAmount > post.uiTokenAmount.uiAmount ? accountPubkey : '',
+          to: pre.uiTokenAmount.uiAmount < post.uiTokenAmount.uiAmount ? accountPubkey : '',
           decimals: pre.uiTokenAmount.decimals
         });
       }
